@@ -273,7 +273,16 @@ export const VisualEditor = ({
                     className={`${styles.editorArea} ${styles.visualContent}`}
                     contentEditable
                     onInput={handleInput}
-                    onPaste={handlePaste}
+                    onPaste={handlePaste} // Native Paste
+                    onDrop={(e) => { // Native Drop
+                        e.preventDefault();
+                        const items = e.dataTransfer.items;
+                        if (items) {
+                            // Reuse logic from handlePaste but strictly for drop data
+                            const clipboardEvent = { clipboardData: e.dataTransfer, preventDefault: () => { }, stopPropagation: () => { } } as any;
+                            handlePaste(clipboardEvent);
+                        }
+                    }}
                     onClick={handleEditorClick}
                 />
             </div>

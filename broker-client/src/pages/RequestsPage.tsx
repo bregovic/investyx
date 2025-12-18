@@ -15,9 +15,10 @@ import {
     Switch,
     Popover,
     PopoverTrigger,
-    PopoverSurface
+    PopoverSurface,
+    Badge
 } from "@fluentui/react-components";
-import { Filter24Regular } from "@fluentui/react-icons";
+import { Filter24Regular, ArrowUp24Regular, ArrowDown24Regular, Subtract24Regular } from "@fluentui/react-icons";
 import { useState, useEffect } from "react";
 import { useSearchParams } from 'react-router-dom';
 import axios from "axios";
@@ -565,6 +566,21 @@ const RequestsPage = () => {
             minWidth: 40
         },
         {
+            columnId: 'priority',
+            renderHeaderCell: () => 'Priorita',
+            renderCell: (item: RequestItem) => {
+                const p = item.priority || 'medium';
+                if (p === 'high') return <Badge color="danger" icon={<ArrowUp24Regular />}>High</Badge>;
+                if (p === 'low') return <Badge color="success" icon={<ArrowDown24Regular />}>Low</Badge>;
+                return <Badge color="informative" icon={<Subtract24Regular />}>Medium</Badge>;
+            },
+            compare: (a: RequestItem, b: RequestItem) => {
+                const map: any = { high: 3, medium: 2, low: 1 };
+                return (map[a.priority] || 2) - (map[b.priority] || 2);
+            },
+            minWidth: 110
+        },
+        {
             columnId: 'subject',
             renderHeaderCell: () => 'Předmět',
             renderCell: (item: RequestItem) => (<Text weight="semibold">{item.subject}</Text>),
@@ -639,6 +655,7 @@ const RequestsPage = () => {
                                                 minWidth: '400px'
                                             }}
                                             autoFocus
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSubject(); }}
                                         />
                                         <Button icon={<Save24Regular />} appearance="primary" onClick={handleSaveSubject} />
                                         <Button icon={<Dismiss24Regular />} appearance="subtle" onClick={() => setIsEditingSubject(false)} />

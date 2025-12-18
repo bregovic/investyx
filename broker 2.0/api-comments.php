@@ -9,7 +9,7 @@ header("Cache-Control: no-cache");
 
 session_start();
 
-$paths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php'];
+$paths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php', __DIR__ . '/../env.php'];
 $loaded = false;
 foreach ($paths as $p) { if (file_exists($p)) { require_once $p; $loaded = true; break; } }
 if (!$loaded) { echo json_encode(['success' => false, 'error' => 'env not found']); exit; }
