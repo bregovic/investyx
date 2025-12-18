@@ -58,7 +58,9 @@ if (file_exists($servicePath)) {
             
             $ticker = isset($_GET['ticker']) ? $_GET['ticker'] : 'AVWS';
             echo "Fetching $ticker...\n";
-            $data = $service->getQuote($ticker, true); // Force fresh
+            // Check Yahoo fallback manually in debug if needed
+            // But let's trust getQuote first
+            $data = $service->getQuote($ticker, true); 
             
             if ($data) {
                 echo "Fetch SUCCESS: " . print_r($data, true) . "\n";
