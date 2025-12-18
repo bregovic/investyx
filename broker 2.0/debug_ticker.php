@@ -70,20 +70,20 @@ if (file_exists($servicePath)) {
                     echo "Checking $url ...\n";
                     $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4]]);
                     $json = @file_get_contents($url, false, $ctx);
+                    
                     if ($json === false) {
-                        $error = error_get_last();
-                        echo "Failed to fetch $url. Error: " . print_r($error, true) . "\n";
-                    }
-                    if ($json) {
+                        $e = error_get_last();
+                        echo "Failed to fetch content from $url. PHP Error: " . ($e['message'] ?? 'Unknown network error') . "\n";
+                    } elseif ($json) {
                          $decoded = json_decode($json, true);
                          if (isset($decoded['chart']['result'][0]['meta']['regularMarketPrice'])) {
                              echo "FOUND in Yahoo as $c! Price: " . $decoded['chart']['result'][0]['meta']['regularMarketPrice'] . "\n";
                          } else {
-                             echo "Response from Yahoo for $c valid but no price found.\n";
-                             if (isset($decoded['chart']['error'])) echo "Error: " . print_r($decoded['chart']['error'], true) . "\n";
+                             echo "Response from Yahoo for $c valid JSON but price missing.\n";
+                             if (isset($decoded['chart']['error'])) echo "API Error: " . print_r($decoded['chart']['error'], true) . "\n";
                          }
                     } else {
-                        echo "Failed to fetch $url\n";
+                        echo "Empty response from $url\n";
                     }
                 }
             }
