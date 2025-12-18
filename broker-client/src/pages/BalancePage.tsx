@@ -105,6 +105,39 @@ export const BalancePage = () => {
         }
     };
 
+    const handleFilteredDataChange = useCallback((filteredItems: PortfolioItem[]) => {
+        let total_value_czk = 0;
+        let total_cost_czk = 0;
+        let total_unrealized_czk = 0;
+        const count = filteredItems.length;
+
+        filteredItems.forEach(item => {
+            total_value_czk += item.current_value_czk || 0;
+            total_cost_czk += item.total_cost_czk || 0;
+            total_unrealized_czk += item.unrealized_czk || 0;
+        });
+
+        setSummary(prev => {
+            const current = prev || { total_value_czk: 0, total_cost_czk: 0, total_unrealized_czk: 0, count: -1 };
+            // Check for equality to prevent infinite loop
+            if (
+                Math.abs(current.total_value_czk - total_value_czk) < 0.01 &&
+                Math.abs(current.total_cost_czk - total_cost_czk) < 0.01 &&
+                Math.abs(current.total_unrealized_czk - total_unrealized_czk) < 0.01 &&
+                current.count === count
+            ) {
+                return prev;
+            }
+
+            return {
+                total_value_czk,
+                total_cost_czk,
+                total_unrealized_czk,
+                count
+            };
+        });
+    }, []);
+
     // Columns MUST be defined before conditional returns (React Hooks rules)
     const columns = useMemo(() => [
         {
@@ -220,6 +253,8 @@ export const BalancePage = () => {
                             items={items}
                             columns={columns}
                             getRowId={getRowId}
+                            withFilterRow
+                            onFilteredDataChange={handleFilteredDataChange}
                         />
                     </div>
                 </div>
