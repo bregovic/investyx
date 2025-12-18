@@ -409,7 +409,7 @@ class GoogleFinanceService
             'LLOY' => ['LLOY:LON', 'LLOY.L'],
             'AVWS' => ['AVWS:NYSEARCA', 'AVWS'],
             'CYN' => ['CYN:NASDAQ', 'CYN'],
-            'ZPRV' => ['ZPRV:ETR', 'ZPRV-GY'],
+            'ZPRV' => ['ZPRV:ETR', 'ZPRV.DE'],
         ];
 
         if (array_key_exists($ticker, $customMap)) {
