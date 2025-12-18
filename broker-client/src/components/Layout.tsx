@@ -238,7 +238,7 @@ const Layout = () => {
                                     icon={<Alert24Regular className={styles.headerIcon} />}
                                     onClick={() => {
                                         window.dispatchEvent(new CustomEvent('reset-requests-page'));
-                                        navigate('/requests');
+                                        navigate('/requests?mine=1');
                                     }}
                                     title="Moje požadavky"
                                 />

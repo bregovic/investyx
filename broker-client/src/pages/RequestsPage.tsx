@@ -327,7 +327,11 @@ const RequestsPage = () => {
         loadUsers();
 
         // Listen for reset events from menu
-        const handleReset = () => setSelectedRequest(null);
+        const handleReset = () => {
+            setSelectedRequest(null);
+            const mine = new URLSearchParams(window.location.search).get('mine') === '1';
+            setShowOnlyMine(mine);
+        };
         window.addEventListener('reset-requests-page', handleReset);
         return () => window.removeEventListener('reset-requests-page', handleReset);
     }, [showOnlyMine]);
