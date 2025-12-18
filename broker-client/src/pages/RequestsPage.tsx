@@ -11,9 +11,11 @@ import {
     Avatar,
     Dialog,
     DialogSurface,
-    shorthands
+    shorthands,
+    Switch
 } from "@fluentui/react-components";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from 'react-router-dom';
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
 import { PageLayout, PageContent, PageHeader } from "../components/PageLayout";
@@ -302,6 +304,10 @@ const RequestsPage = () => {
     const [newComment, setNewComment] = useState('');
     const [sendingComment, setSendingComment] = useState(false);
 
+    // Filter by Mine
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [showOnlyMine, setShowOnlyMine] = useState(searchParams.get('mine') === '1');
+
     // Lightbox
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -319,7 +325,12 @@ const RequestsPage = () => {
         const handleReset = () => setSelectedRequest(null);
         window.addEventListener('reset-requests-page', handleReset);
         return () => window.removeEventListener('reset-requests-page', handleReset);
-    }, []);
+    }, [showOnlyMine]);
+
+    useEffect(() => {
+        const mine = searchParams.get('mine') === '1';
+        if (mine !== showOnlyMine) setShowOnlyMine(mine);
+    }, [searchParams]);
 
     useEffect(() => {
         if (selectedRequest) {
@@ -339,7 +350,10 @@ const RequestsPage = () => {
     const loadRequests = async () => {
         setLoadingRequests(true);
         try {
-            const res = await axios.get(getApiUrl('api-changerequests.php?action=list&view=all'));
+            const url = showOnlyMine
+                ? getApiUrl('api-changerequests.php?action=list')
+                : getApiUrl('api-changerequests.php?action=list&view=all');
+            const res = await axios.get(url);
             if (res.data.success) setRequests(res.data.data);
         } catch (e) { console.error(e); } finally { setLoadingRequests(false); }
     };
@@ -922,18 +936,37 @@ const RequestsPage = () => {
             <PageContent noScroll>
                 <div className={styles.root}>
                     <div className={styles.filterBar}>
-                        <Text weight="semibold" style={{ marginRight: '8px' }}>Filtr stavů:</Text>
-                        {allStatuses.map(s => (
-                            <Checkbox
-                                key={s}
-                                label={s}
-                                checked={selectedStatuses.includes(s)}
-                                onChange={(_, data) => {
-                                    if (data.checked) setSelectedStatuses(prev => [...prev, s]);
-                                    else setSelectedStatuses(prev => prev.filter(x => x !== s));
-                                }}
-                            />
-                        ))}
+                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Switch
+                                    label="Jen moje"
+                                    checked={showOnlyMine}
+                                    onChange={(_, data) => {
+                                        setShowOnlyMine(!!data.checked);
+                                        setSearchParams(prev => {
+                                            if (data.checked) prev.set('mine', '1');
+                                            else prev.delete('mine');
+                                            return prev;
+                                        });
+                                    }}
+                                />
+                            </div>
+                            <div style={{ width: '1px', height: '20px', backgroundColor: tokens.colorNeutralStroke2 }} />
+                            <Text weight="semibold">Filtr stavů:</Text>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                {allStatuses.map(s => (
+                                    <Checkbox
+                                        key={s}
+                                        label={s}
+                                        checked={selectedStatuses.includes(s)}
+                                        onChange={(_, data) => {
+                                            if (data.checked) setSelectedStatuses(prev => [...prev, s]);
+                                            else setSelectedStatuses(prev => prev.filter(x => x !== s));
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium }}>
                         {loadingRequests ? <Spinner /> : (

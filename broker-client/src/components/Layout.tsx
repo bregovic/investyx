@@ -163,11 +163,23 @@ const useStyles = makeStyles({
         fontWeight: 600,
         cursor: 'pointer',
         marginLeft: '4px'
+    },
+    notificationWrapper: {
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center'
+    },
+    badge: {
+        position: 'absolute',
+        top: '2px',
+        right: '2px',
+        zIndex: 1
     }
 });
 
 import { SettingsDialog } from './SettingsDialog';
 import { useAuth } from '../context/AuthContext';
+import { Badge } from '@fluentui/react-components';
 
 const Layout = () => {
     const styles = useStyles();
@@ -220,7 +232,27 @@ const Layout = () => {
                         )}
 
                         <div className={styles.headerRight} style={{ marginLeft: 'auto', paddingRight: '12px' }}>
-                            <Button appearance="transparent" icon={<Alert24Regular className={styles.headerIcon} />} />
+                            <div className={styles.notificationWrapper}>
+                                <Button
+                                    appearance="transparent"
+                                    icon={<Alert24Regular className={styles.headerIcon} />}
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('reset-requests-page'));
+                                        navigate('/requests');
+                                    }}
+                                    title="Moje požadavky"
+                                />
+                                {user?.assigned_tasks_count && user.assigned_tasks_count > 0 ? (
+                                    <Badge
+                                        size="small"
+                                        appearance="filled"
+                                        color="danger"
+                                        className={styles.badge}
+                                    >
+                                        {user.assigned_tasks_count}
+                                    </Badge>
+                                ) : null}
+                            </div>
                             <Button appearance="transparent" icon={<Emoji24Regular className={styles.headerIcon} />} onClick={() => setFeedbackOpen(true)} />
                             <Button appearance="transparent" icon={<Settings24Regular className={styles.headerIcon} />} onClick={() => setSettingsOpen(true)} />
 
