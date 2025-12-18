@@ -241,7 +241,7 @@ export const FeedbackModal = ({ open, onOpenChange }: Omit<FeedbackModalProps, '
                 <DialogBody style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <DialogTitle>
                         <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as any)}>
-                            <Tab value="report">Nahlásit / Feedback</Tab>
+                            <Tab value="report">Nahlásit chybu / Zpětná vazba</Tab>
                             <Tab value="history">Historie vývoje</Tab>
                         </TabList>
                     </DialogTitle>
