@@ -495,8 +495,6 @@ class GoogleFinanceService
             }
         }
 
-        }
-
         if ($data['current_price']) {
             return $data;
         }
