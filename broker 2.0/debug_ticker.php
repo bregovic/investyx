@@ -70,6 +70,10 @@ if (file_exists($servicePath)) {
                     echo "Checking $url ...\n";
                     $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4]]);
                     $json = @file_get_contents($url, false, $ctx);
+                    if ($json === false) {
+                        $error = error_get_last();
+                        echo "Failed to fetch $url. Error: " . print_r($error, true) . "\n";
+                    }
                     if ($json) {
                          $decoded = json_decode($json, true);
                          if (isset($decoded['chart']['result'][0]['meta']['regularMarketPrice'])) {
