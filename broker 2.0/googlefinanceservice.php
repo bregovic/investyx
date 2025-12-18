@@ -445,8 +445,8 @@ class GoogleFinanceService
     {
         // Fix for CBK collision: Revolut exports Commerzbank as 'CBK'.
         // Yahoo/Google defaults 'CBK' to Commercial BancGroup (US/USD).
-        // If context implies EUR, or no context, assume Commerzbank (CBK.DE).
-        if ($ticker === 'CBK' && ($targetCurrency === 'EUR' || $targetCurrency === null)) {
+        // For Revolut users, CBK is ALWAYS Commerzbank AG (Germany/EUR).
+        if ($ticker === 'CBK') {
             $ticker = 'CBK.DE';
         }
 
