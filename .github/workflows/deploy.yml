@@ -1,0 +1,74 @@
+name: Auto Deploy to Investyx
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Important for delta deployments
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Frontend
+        run: |
+          cd broker-client
+          npm install
+          npm run build
+
+      - name: Sync Files to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # Local root is current repo root
+          local-dir: ./
+          server-dir: /www/investyx/
+          # We need to handle the build output specifically or merge it.
+          # The SmartDeployer handled two separate locations. 
+          # Here we can deploy the whole repo, but we must ignore things like .git, node_modules.
+          # AND we must ensure broker-client/dist content ends up in /www/investyx/
+          # Actually, it's better to do two sync steps or one smart sync.
+          exclude: |
+            **/.git*
+            **/.agent/**
+            **/node_modules/**
+            broker-client/src/**
+            broker-client/public/**
+            broker-client/*.json
+            broker-client/*.js
+            broker-client/*.ts
+            .gitignore
+            manual_deploy.ps1
+            smart_deploy.ps1
+            deploy/**
+            README.md
+
+      - name: Sync Frontend Build (dist) to Root
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./broker-client/dist/
+          server-dir: /www/investyx/
+
+      - name: Sync Backend (broker 2.0) to Root
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./broker 2.0/
+          server-dir: /www/investyx/
