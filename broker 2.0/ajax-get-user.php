@@ -59,7 +59,7 @@ function resolveRole() {
     $userId = resolveUserId();
     if ($userId) {
         // Load from database if available
-        $envPaths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php'];
+        $envPaths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php', __DIR__ . '/../env.php'];
         foreach ($envPaths as $p) {
             if (file_exists($p)) {
                 require_once $p;
@@ -99,7 +99,7 @@ $assignedCount = 0;
 if ($id) {
     // We already have $pdo if resolveRole connected to DB, but let's ensure it.
     if (!isset($pdo)) {
-        $envPaths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php'];
+        $envPaths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php', __DIR__ . '/../env.php'];
         foreach ($envPaths as $p) {
             if (file_exists($p)) {
                 require_once $p;
