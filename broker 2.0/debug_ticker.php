@@ -62,6 +62,28 @@ if (file_exists($servicePath)) {
             // But let's trust getQuote first
             $data = $service->getQuote($ticker, true); 
             
+            if (!$data) {
+                echo "GetQuote returned null. Trying manual Yahoo URL fetch check...\n";
+                $candidates = [$ticker, $ticker.'.DE', $ticker.'.L'];
+                foreach($candidates as $c) {
+                    $url = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($c) . "?interval=1d&range=1d";
+                    echo "Checking $url ...\n";
+                    $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4]]);
+                    $json = @file_get_contents($url, false, $ctx);
+                    if ($json) {
+                         $decoded = json_decode($json, true);
+                         if (isset($decoded['chart']['result'][0]['meta']['regularMarketPrice'])) {
+                             echo "FOUND in Yahoo as $c! Price: " . $decoded['chart']['result'][0]['meta']['regularMarketPrice'] . "\n";
+                         } else {
+                             echo "Response from Yahoo for $c valid but no price found.\n";
+                             if (isset($decoded['chart']['error'])) echo "Error: " . print_r($decoded['chart']['error'], true) . "\n";
+                         }
+                    } else {
+                        echo "Failed to fetch $url\n";
+                    }
+                }
+            }
+            
             if ($data) {
                 echo "Fetch SUCCESS: " . print_r($data, true) . "\n";
             } else {
