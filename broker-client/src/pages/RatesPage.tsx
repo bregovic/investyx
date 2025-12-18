@@ -159,8 +159,8 @@ export const RatesPage = () => {
                 {loading && <Spinner label={t('loading_rates')} />}
 
                 {!loading && !error && (
-                    <div className={styles.tableContainer}>
-                        <div style={{ minWidth: '800px' }}>
+                    <div className={styles.tableContainer} style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                        <div style={{ minWidth: '800px', height: '100%' }}>
                             <SmartDataGrid
                                 items={items}
                                 columns={[
