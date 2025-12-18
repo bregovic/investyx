@@ -33,23 +33,31 @@ try {
     require_once __DIR__ . '/googlefinanceservice.php';
     $service = new GoogleFinanceService($pdo, 0); // TTL 0 = vždy čerstvé
     
-    // Získáme seznam všech aktivních tickerů
-    // Můžeme omezit jen na sledované (track_history = 1) nebo všechny
-    // Pro dividendy chceme asi všechny, co jsou v seznamu.
-    $stmt = $pdo->query("SELECT id FROM live_quotes WHERE status = 'active'");
-    $tickers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    // Získáme seznam všech aktivních tickerů s měnou z transakcí
+    // Transactions are source of truth for currency
+    $stmt = $pdo->query("
+        SELECT DISTINCT lq.id, 
+               (SELECT currency FROM transactions WHERE id = lq.id LIMIT 1) as tx_currency
+        FROM live_quotes lq 
+        WHERE lq.status = 'active'
+    ");
+    $tickerData = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $results = [
-        'total' => count($tickers),
+        'total' => count($tickerData),
         'updated' => 0,
         'failed' => 0,
         'details' => []
     ];
     
-    foreach ($tickers as $ticker) {
+    foreach ($tickerData as $row) {
+        $ticker = $row['id'];
+        $txCurrency = $row['tx_currency']; // NULL if no transactions exist
+        
         try {
             // getQuote s forceFresh = true
-            $data = $service->getQuote($ticker, true);
+            // Pass transaction currency so correct exchange is used for fetching
+            $data = $service->getQuote($ticker, true, $txCurrency);
             if ($data) {
                 $results['updated']++;
             } else {

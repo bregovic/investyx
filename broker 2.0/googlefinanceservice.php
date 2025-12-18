@@ -555,13 +555,32 @@ class GoogleFinanceService
             return null;
         }
 
-        // For stocks, use Google Finance (existing logic)
-        // For stocks, use Google Finance (existing logic)
-        $exchanges = ['NASDAQ', 'NYSE', 'NYSEARCA'];
-        
-        // Prioritize European exchanges if EUR is requested
-        if ($targetCurrency === 'EUR') {
-            array_unshift($exchanges, 'FRA', 'ETR', 'AMS', 'BIT'); 
+        // For stocks, use Google Finance
+        // Select exchanges based on target currency (like old bal.php system)
+        $exchanges = [];
+        switch ($targetCurrency) {
+            case 'EUR':
+                $exchanges = ['ETR', 'FRA', 'XETRA', 'AMS', 'VIE', 'BIT'];
+                break;
+            case 'GBP':
+                $exchanges = ['LON'];
+                break;
+            case 'CAD':
+                $exchanges = ['TSE', 'CVE'];
+                break;
+            case 'JPY':
+                $exchanges = ['TYO'];
+                break;
+            case 'AUD':
+                $exchanges = ['ASX'];
+                break;
+            case 'HKD':
+                $exchanges = ['HKG'];
+                break;
+            case 'USD':
+            default:
+                $exchanges = ['NASDAQ', 'NYSE', 'NYSEARCA', 'NYSEAMERICAN'];
+                break;
         }
         
         // Add specific exchanges for ETFs often traded in Europe (London, Xetra, etc.)
