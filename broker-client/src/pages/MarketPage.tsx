@@ -223,7 +223,7 @@ const MarketPage = () => {
     const [items, setItems] = useState<MarketItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterText] = useState('');
-    const [showWatchedOnly, setShowWatchedOnly] = useState(true);
+    const [showWatchedOnly, setShowWatchedOnly] = useState(false);
 
     // Add Ticker State
     const [isAddOpen, setAddOpen] = useState(false);
