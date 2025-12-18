@@ -10,7 +10,9 @@ import {
     Dropdown,
     Option,
     Label,
-    makeStyles
+    makeStyles,
+    Text,
+    tokens
 } from '@fluentui/react-components';
 import { useTranslation } from '../context/TranslationContext';
 import { useState } from 'react';
@@ -45,6 +47,14 @@ export const SettingsDialog = ({ open, onOpenChange }: { open: boolean, onOpenCh
                 <DialogBody>
                     <DialogTitle>{t('settings.title')}</DialogTitle>
                     <DialogContent className={styles.content}>
+                        <div style={{ marginBottom: '16px', padding: '8px', backgroundColor: tokens.colorNeutralBackground2, borderRadius: '4px' }}>
+                            <Text size={200} block style={{ color: tokens.colorNeutralForeground4 }}>
+                                Version: <span style={{ fontFamily: 'monospace' }}>{__APP_VERSION__}</span>
+                            </Text>
+                            <Text size={200} block style={{ color: tokens.colorNeutralForeground4 }}>
+                                Built: {new Date(__APP_BUILD_DATE__).toLocaleString()}
+                            </Text>
+                        </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <Label>{t('settings.language')}</Label>
                             <Dropdown
