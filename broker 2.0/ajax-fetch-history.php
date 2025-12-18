@@ -105,6 +105,22 @@ try {
     }
 
     function processTicker($pdo, $ticker, $period) {
+        $originalTicker = $ticker;
+        
+        // Check if this ticker is an alias for another ticker
+        try {
+            $stmt = $pdo->prepare("SELECT alias_of FROM ticker_mapping WHERE ticker = ? AND alias_of IS NOT NULL AND alias_of != '' LIMIT 1");
+            $stmt->execute([$ticker]);
+            $aliasOf = $stmt->fetchColumn();
+            
+            if ($aliasOf) {
+                // Use the canonical ticker for fetching
+                $ticker = $aliasOf;
+            }
+        } catch (Exception $e) {
+            // Column might not exist, ignore
+        }
+        
         $yahooTicker = mapTickerToYahoo($ticker);
         
         // A. CHARTS FETCH
@@ -211,7 +227,12 @@ try {
                     if (isset($c[$i]) && $c[$i] !== null) {
                         $dateStr = date('Y-m-d', $ts[$i]);
                         $price = $c[$i] * $conversionFactor;
+                        // Save under canonical ticker
                         $stmtHist->execute([':t'=>$ticker, ':d'=>$dateStr, ':p'=>$price]);
+                        // Also save under original ticker if it's an alias
+                        if ($originalTicker !== $ticker) {
+                            $stmtHist->execute([':t'=>$originalTicker, ':d'=>$dateStr, ':p'=>$price]);
+                        }
                     }
                 }
                 if($pdo->inTransaction()) $pdo->commit();
