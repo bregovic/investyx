@@ -95,13 +95,38 @@ if(count($parts) >= 2) {
     $initials = strtoupper(substr($name, 0, 2));
 }
 
+$assignedCount = 0;
+if ($id) {
+    // We already have $pdo if resolveRole connected to DB, but let's ensure it.
+    if (!isset($pdo)) {
+        $envPaths = [__DIR__ . '/env.local.php', __DIR__ . '/env.php'];
+        foreach ($envPaths as $p) {
+            if (file_exists($p)) {
+                require_once $p;
+                try {
+                    $pdo = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4", DB_USER, DB_PASS);
+                } catch (Exception $e) { }
+                break;
+            }
+        }
+    }
+    if (isset($pdo)) {
+        try {
+            $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM changerequest_log WHERE assigned_to = ? AND status NOT IN ('Done', 'Canceled', 'Duplicity')");
+            $stmtCount->execute([$id]);
+            $assignedCount = (int)$stmtCount->fetchColumn();
+        } catch (Exception $e) { }
+    }
+}
+
 echo json_encode([
     'success' => !!$id,
     'user' => [
         'id' => $id,
         'name' => $name,
         'role' => $role,
-        'initials' => $initials
+        'initials' => $initials,
+        'assigned_tasks_count' => $assignedCount
     ]
 ]);
 

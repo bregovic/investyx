@@ -6,6 +6,7 @@ type User = {
     role: 'admin' | 'user';
     name: string;
     initials: string;
+    assigned_tasks_count?: number;
 };
 
 type AuthContextType = {
@@ -46,7 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     username: data.user.name, // Mapping 'name' from API to 'username'
                     role: data.user.role || 'user', // API might need to return role
                     name: data.user.name || '',
-                    initials: data.user.initials || 'User'
+                    initials: data.user.initials || 'User',
+                    assigned_tasks_count: data.user.assigned_tasks_count || 0
                 });
             } else {
                 setUser(null);
@@ -72,7 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     username: data.user.username,
                     role: data.user.role,
                     name: data.user.username,
-                    initials: data.user.username.substring(0, 2).toUpperCase()
+                    initials: data.user.username.substring(0, 2).toUpperCase(),
+                    assigned_tasks_count: data.user.assigned_tasks_count || 0
                 });
                 return true;
             }

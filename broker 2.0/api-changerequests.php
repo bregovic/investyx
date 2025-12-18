@@ -313,7 +313,7 @@ if ($action === 'list') {
                    FROM changerequest_log c 
                    JOIN users u ON c.user_id = u.id 
                    LEFT JOIN users au ON c.assigned_to = au.id
-                   WHERE c.user_id = ? 
+                   WHERE c.assigned_to = ? 
                    ORDER BY c.created_at DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$userId]);
