@@ -70,6 +70,10 @@ const useStyles = makeStyles({
         color: tokens.colorBrandForeground1
     },
     cell: {
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        display: 'block', // Required for textOverflow to work in some flex contexts
         '@media (max-width: 768px)': {
             paddingLeft: '4px',
             paddingRight: '4px',
