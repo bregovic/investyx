@@ -214,8 +214,8 @@ export const BalancePage = () => {
                     </div>
                 )}
 
-                <div className={styles.tableContainer}>
-                    <div style={{ minWidth: '800px' }}>
+                <div className={styles.tableContainer} style={{ maxHeight: 'calc(100vh - 350px)' }}>
+                    <div style={{ minWidth: '800px', height: '100%' }}>
                         <SmartDataGrid
                             items={items}
                             columns={columns}
