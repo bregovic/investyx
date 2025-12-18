@@ -1,0 +1,4 @@
+DATABASE_URL="postgresql://user:password@host:port/database?schema=public"
+PORT=3000
+# JWT_SECRET="your-secret-key" # Pokud používáte auth
+# FRONTEND_URL="https://hollyhop.cz/vas-projekt" # Pro CORS konfiguraci

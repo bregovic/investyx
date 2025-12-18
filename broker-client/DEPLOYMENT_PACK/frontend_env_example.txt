@@ -1,0 +1,6 @@
+# Tento projekt (Frontend) nepoužívá .env soubor pro build.
+# Konfigurace URL backendu je v souboru src/utils/config.ts
+#
+# Pokud byste chtěli použít .env, musíte upravit next.config.ts a config.ts
+# Příklad:
+# NEXT_PUBLIC_BACKEND_URL="https://vas-backend.up.railway.app"

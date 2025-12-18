@@ -1,0 +1,42 @@
+opraveno
+jezdec doprava
+jazyk nefunguje
+logof nefunguje
+správce
+
+
+dividendy
+změny
+přehled trhu, zobrazit všechny záznamy, né omezené stránky počtem 
+cron na automatizované funkce
+automicky při importu dnešních hodnot dát cenu do price history
+funkce pro import akcií do přehledu
+filtr na crypto akcie do všech
+kurzáky
+přejmenovat funkce pro aktualizace cen
+
+požadavky
+bugy
+how to
+přehled verzí
+zarovnání doprava
+Zobrazení jen moje
+
+posouvání hranice slupců uživatelsky
+funkční ličty do všech formulářů
+
+kurzy mají množství nepotřebné
+
+optimalizace pro mobil
+
+
+security, record level
+
+performance, lokální třídy
+
+
+
+Filtr datum bez teček a rozmezí dvě tečky
+
+mohli bychom prosím pro všechny formuláře sjednotit a vylepšit systém filtrování? Rád bych měl nad formulářem decentní elegantní tlačítko Filtr. Výchozí při otevření formu bude vypnuto. Když se zmáčkne tlačítko 
+filtr tak se pod hlavičkou formuláře objeví filtrovací řádek nad trasnakcemi, který umožní filtrovat podle jednotlivých sloupců. Půjde to prosím? Bylo by fajn, kdybychom dokázali filtrovat i více hodnot najednou a umožnit to validovat zadání jako lookup. CO myslíš?

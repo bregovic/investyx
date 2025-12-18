@@ -1,0 +1,13 @@
+
+<IfModule mod_mime.c>
+  AddType application/javascript .mjs
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /investyx/
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /investyx/index.html [L]
+</IfModule>

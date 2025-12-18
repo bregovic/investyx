@@ -1,0 +1,242 @@
+/* css/table-filter.css */
+
+/* D365 Inspired Filter Styles */
+
+/* 1. Header Integration */
+.tf-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: #605e5c;
+    /* Neutral dark gray */
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    margin-left: 8px;
+    /* Spacing from sort icon or text */
+    border-radius: 2px;
+}
+
+.tf-header-icon:hover {
+    background-color: #f3f2f1;
+    color: #201f1e;
+    opacity: 1;
+}
+
+.tf-header-icon.active {
+    color: #0078d4;
+    /* D365 Blue */
+    opacity: 1;
+}
+
+.tf-header-icon i {
+    font-size: 12px;
+}
+
+/* Highlight filtered column header */
+th.tf-filtered {
+    position: relative;
+}
+
+th.tf-filtered::after {
+    /* Optional: Blue underline indicator for filtered columns */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #0078d4;
+}
+
+/* 2. Popover Container */
+.tf-popover {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid #edebe9;
+    box-shadow: 0 3.2px 7.2px 0 rgba(0, 0, 0, 0.13), 0 0.6px 1.8px 0 rgba(0, 0, 0, 0.11);
+    /* Depth 8 */
+    border-radius: 2px;
+    font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    font-size: 14px;
+    color: #201f1e;
+    z-index: 2000;
+    min-width: 260px;
+    max-width: 320px;
+    display: none;
+    flex-direction: column;
+    animation: tfFadeIn 0.15s ease-out;
+}
+
+@keyframes tfFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tf-popover.visible {
+    display: flex;
+}
+
+/* 3. Popover Items (Sort) */
+.tf-popover-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    cursor: pointer;
+    color: #201f1e;
+    transition: background-color 0.1s;
+    user-select: none;
+}
+
+.tf-popover-item:hover {
+    background-color: #f3f2f1;
+}
+
+.tf-popover-item i {
+    width: 24px;
+    text-align: center;
+    margin-right: 8px;
+    color: #0078d4;
+    font-size: 14px;
+}
+
+.tf-popover-separator {
+    height: 1px;
+    background-color: #edebe9;
+    margin: 4px 0;
+}
+
+/* 4. Filter Section */
+.tf-filter-section {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tf-label {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+    color: #323130;
+}
+
+/* Operator Dropdown */
+.tf-operator-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    color: #0078d4;
+    /* Link color */
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    margin-bottom: 5px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%230078d4'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    background-size: 1.25em;
+    padding-right: 20px;
+}
+
+.tf-operator-select:hover {
+    text-decoration: underline;
+}
+
+/* Input Field */
+.tf-filter-input {
+    width: 100%;
+    border: 1px solid #8a8886;
+    border-radius: 2px;
+    padding: 6px 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.tf-filter-input:focus {
+    border-color: #0078d4;
+    border-width: 2px;
+    /* D365 focus style is thicker border */
+    padding: 5px 7px;
+    /* Adjust for border width */
+}
+
+/* Checkbox List (Je jeden z) */
+.tf-checkbox-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #edebe9;
+    padding: 5px;
+}
+
+.tf-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.tf-checkbox-item:hover {
+    background: #f3f2f1;
+}
+
+.tf-checkbox-item input {
+    margin-right: 8px;
+}
+
+/* 5. Footer Actions */
+.tf-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: #faf9f8;
+    /* Slightly different bg for footer */
+    border-top: 1px solid #edebe9;
+}
+
+.tf-btn {
+    padding: 6px 20px;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.1s;
+}
+
+.tf-btn-primary {
+    background-color: #0078d4;
+    color: white;
+    border-color: #0078d4;
+}
+
+.tf-btn-primary:hover {
+    background-color: #106ebe;
+    border-color: #106ebe;
+}
+
+.tf-btn-secondary {
+    background-color: #ffffff;
+    color: #201f1e;
+    border-color: #8a8886;
+}
+
+.tf-btn-secondary:hover {
+    background-color: #f3f2f1;
+}

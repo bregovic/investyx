@@ -1,0 +1,276 @@
+/* css/d365-theme.css */
+/* Microsoft Dynamics 365 FO Inspired Theme */
+
+:root {
+    --d365-blue: #0078d4;
+    --d365-blue-hover: #106ebe;
+    --d365-bg: #f3f2f1;
+    /* Light gray background */
+    --d365-border: #edebe9;
+    --d365-text-primary: #201f1e;
+    --d365-text-secondary: #605e5c;
+    --d365-hover-row: #f3f2f1;
+    --d365-selected-row: #edebe9;
+    --d365-white: #ffffff;
+}
+
+body {
+    background-color: var(--d365-bg);
+    font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    color: var(--d365-text-primary);
+    font-size: 13px;
+    /* Compact font size */
+}
+
+/* 1. Layout - Full Width */
+.container,
+.container-fluid,
+.wrapper {
+    max-width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    margin: 0 !important;
+}
+
+/* 2. D365 HEADER STRUCTURE */
+.d365-header-container {
+    background: var(--d365-white);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: 0 -16px 0 -16px;
+    /* Negate container padding */
+    padding: 0;
+    border-bottom: 1px solid var(--d365-border);
+}
+
+/* Phase 1: Breadcrumb / Title Bar */
+.d365-top-bar {
+    background: #000;
+    /* Usually dark or brand color */
+    color: white;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    display: none;
+    /* User has their own header */
+}
+
+/* Phase 2: Action Pane (Command Bar) */
+.d365-action-pane {
+    background: var(--d365-bg);
+    /* Or white */
+    padding: 4px 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--d365-border);
+}
+
+/* Buttons in Action Pane */
+.d365-command-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--d365-text-primary);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 2px;
+}
+
+.d365-command-btn:hover {
+    background: #e1dfdd;
+}
+
+.d365-command-btn:active {
+    background: #c8c6c4;
+}
+
+.d365-command-btn i {
+    color: var(--d365-blue);
+    font-size: 14px;
+}
+
+/* Phase 3: Title Row (Standard View + Filter) */
+.d365-title-row {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--d365-white);
+}
+
+.d365-view-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--d365-text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.d365-view-title:hover {
+    color: var(--d365-blue-hover);
+}
+
+.d365-view-title i {
+    font-size: 12px;
+    color: var(--d365-text-secondary);
+}
+
+/* Quick Filter Input */
+.d365-quick-filter {
+    position: relative;
+    max-width: 250px;
+}
+
+.d365-quick-filter input {
+    background: #f3f2f1;
+    border: none;
+    /* D365 simple style */
+    border-bottom: 1px solid var(--d365-text-secondary);
+    padding: 6px 24px 6px 8px;
+    font-size: 13px;
+    width: 200px;
+    transition: all 0.2s;
+}
+
+.d365-quick-filter input:focus {
+    background: var(--d365-white);
+    border-color: var(--d365-blue);
+    outline: none;
+    border-bottom-width: 2px;
+}
+
+.d365-quick-filter i {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--d365-text-secondary);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+/* Info / Recommendations Bar */
+.d365-info-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--d365-text-secondary);
+    align-items: center;
+    margin-left: auto;
+    /* Push to right */
+}
+
+.d365-info-item {
+    cursor: pointer;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.1s;
+}
+
+.d365-info-item:hover {
+    background: #f3f2f1;
+    color: var(--d365-text-primary);
+}
+
+.d365-info-item i {
+    font-size: 14px;
+}
+
+/* Color accents for info items */
+.d365-info-item.accent-shield i {
+    color: #0078d4;
+}
+
+.d365-info-item.accent-grow i {
+    color: #107c10;
+}
+
+.d365-info-item.accent-fire i {
+    color: #d13438;
+}
+
+/* 3. Data Grid (Table) updates */
+.table-responsive {
+    background: var(--d365-white);
+    border: 1px solid var(--d365-border);
+    border-radius: 2px;
+    box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.13);
+    margin-bottom: 0;
+    margin-top: 0;
+    overflow-x: auto;
+}
+
+table.table {
+    margin-bottom: 0;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Header */
+table.table thead th {
+    background-color: var(--d365-white);
+    color: var(--d365-text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid var(--d365-border);
+    padding: 8px 10px;
+    vertical-align: bottom;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Body Rows */
+table.table tbody td {
+    padding: 4px 10px;
+    vertical-align: middle;
+    font-size: 13px;
+    border-bottom: 1px solid #f3f2f1;
+    color: var(--d365-text-primary);
+    height: 32px;
+}
+
+table.table tbody tr:hover {
+    background-color: var(--d365-hover-row);
+}
+
+.badge {
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.tf-header-icon {
+    font-size: 11px;
+    color: var(--d365-text-secondary);
+}
