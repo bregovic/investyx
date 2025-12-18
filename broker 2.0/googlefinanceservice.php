@@ -263,11 +263,29 @@ class GoogleFinanceService
         $changeAmount = $this->parseNumber($data['change_amount'] ?? null);
         $changePercent = $this->parseNumber($data['change_percent'] ?? null);
         
+        // Check if we have transactions with a different currency - transactions are source of truth
+        $fetchedCurrency = $data['currency'] ?? 'USD';
+        $finalCurrency = $fetchedCurrency;
+        
+        try {
+            $stmtTx = $this->pdo->prepare("SELECT currency FROM transactions WHERE id = ? LIMIT 1");
+            $stmtTx->execute([$id]);
+            $txCurrency = $stmtTx->fetchColumn();
+            
+            if ($txCurrency && $txCurrency !== $fetchedCurrency) {
+                // Transaction currency takes priority
+                error_log("Currency override for $id: fetched $fetchedCurrency, using transaction currency $txCurrency");
+                $finalCurrency = $txCurrency;
+            }
+        } catch (Exception $e) {
+            // Ignore - might be a new ticker without transactions
+        }
+        
         $params = [
             $currentPrice,
             $changeAmount,
             $changePercent,
-            $data['currency'] ?? 'USD',
+            $finalCurrency,
             $data['exchange'] ?? null,
             $data['company_name'] ?? null,
             $id

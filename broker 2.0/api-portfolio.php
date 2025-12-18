@@ -118,11 +118,18 @@ try {
         $g['avg_cost_orig'] = $g['net_qty'] > 0 ? $g['total_cost_orig'] / $g['net_qty'] : 0;
         
         $currentPrice = 0;
+        $currencyMismatch = false;
         if (isset($quotes[$key])) {
             $currentPrice = $quotes[$key]['price'];
-            if($quotes[$key]['currency']) $g['currency'] = $quotes[$key]['currency'];
+            // DON'T override currency from transactions - keep transaction currency as source of truth
+            // But log if there's a mismatch for debugging
+            if ($quotes[$key]['currency'] && $quotes[$key]['currency'] !== $g['currency']) {
+                $currencyMismatch = true;
+                error_log("Currency mismatch for $key: transactions say {$g['currency']}, live_quotes says {$quotes[$key]['currency']}");
+            }
         }
         $g['current_price'] = $currentPrice;
+        $g['currency_mismatch'] = $currencyMismatch;
         
         $cur = $g['currency'];
         $rate = isset($rates[$cur]) ? $rates[$cur] : 1;
