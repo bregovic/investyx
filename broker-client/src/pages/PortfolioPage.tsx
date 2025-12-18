@@ -7,12 +7,6 @@ import {
     Badge,
     Toolbar,
     ToolbarButton,
-    Menu,
-    MenuTrigger,
-    MenuPopover,
-    MenuList,
-    MenuItem,
-    MenuDivider,
     Dialog,
     DialogSurface,
     DialogBody,
@@ -21,7 +15,7 @@ import {
     DialogActions,
     Button
 } from "@fluentui/react-components";
-import { ArrowSync24Regular, Delete24Regular, MoreHorizontal24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Delete24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
@@ -70,7 +64,6 @@ export const PortfolioPage = () => {
     // Delete functionality state
     const [filteredItems, setFilteredItems] = useState<TransactionItem[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [deleteMode, setDeleteMode] = useState<'filtered' | 'all'>('filtered');
     const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
@@ -96,9 +89,8 @@ export const PortfolioPage = () => {
     const handleDelete = async () => {
         setDeleting(true);
         try {
-            const idsToDelete = deleteMode === 'all'
-                ? items.map(i => i.trans_id)
-                : filteredItems.map(i => i.trans_id);
+            // Always use filteredItems - when no filter, it equals all items
+            const idsToDelete = filteredItems.map(i => i.trans_id);
 
             if (idsToDelete.length === 0) {
                 alert('Žádné transakce k odstranění.');
@@ -219,32 +211,14 @@ export const PortfolioPage = () => {
                         {t('refresh') || 'Obnovit'}
                     </ToolbarButton>
 
-                    <Menu>
-                        <MenuTrigger disableButtonEnhancement>
-                            <ToolbarButton appearance="subtle" icon={<MoreHorizontal24Regular />}>
-                                Akce
-                            </ToolbarButton>
-                        </MenuTrigger>
-                        <MenuPopover>
-                            <MenuList>
-                                <MenuItem
-                                    icon={<Delete24Regular />}
-                                    onClick={() => { setDeleteMode('filtered'); setDeleteDialogOpen(true); }}
-                                    disabled={filteredItems.length === 0}
-                                >
-                                    Smazat filtrované ({filteredItems.length})
-                                </MenuItem>
-                                <MenuDivider />
-                                <MenuItem
-                                    icon={<Delete24Regular />}
-                                    onClick={() => { setDeleteMode('all'); setDeleteDialogOpen(true); }}
-                                    disabled={items.length === 0}
-                                >
-                                    Smazat vše ({items.length})
-                                </MenuItem>
-                            </MenuList>
-                        </MenuPopover>
-                    </Menu>
+                    <ToolbarButton
+                        appearance="subtle"
+                        icon={<Delete24Regular />}
+                        onClick={() => setDeleteDialogOpen(true)}
+                        disabled={filteredItems.length === 0}
+                    >
+                        Smazat ({filteredItems.length})
+                    </ToolbarButton>
                 </Toolbar>
             </PageHeader>
             <PageContent noScroll>
@@ -265,14 +239,11 @@ export const PortfolioPage = () => {
                 <DialogSurface>
                     <DialogBody>
                         <DialogTitle>
-                            {deleteMode === 'all' ? 'Smazat všechny transakce?' : 'Smazat filtrované transakce?'}
+                            Smazat {filteredItems.length} transakcí?
                         </DialogTitle>
                         <DialogContent>
                             <Text>
-                                {deleteMode === 'all'
-                                    ? `Opravdu chcete smazat VŠECH ${items.length} transakcí? Tato akce je nevratná.`
-                                    : `Opravdu chcete smazat ${filteredItems.length} filtrovaných transakcí? Tato akce je nevratná.`
-                                }
+                                Opravdu chcete smazat {filteredItems.length} transakcí? Tato akce je nevratná.
                             </Text>
                         </DialogContent>
                         <DialogActions>
