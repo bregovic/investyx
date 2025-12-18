@@ -72,3 +72,11 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./broker 2.0/
           server-dir: /www/investyx/
+
+      - name: Trigger Deploy Hook
+        run: |
+          curl -G "https://hollyhop.cz/investyx/deploy_hook.php" \
+            --data-urlencode "token=${{ secrets.DEPLOY_TOKEN || 'investyx_secret_123' }}" \
+            --data-urlencode "commit_msg=${{ github.event.head_commit.message }}" \
+            --data-urlencode "commit_sha=${{ github.sha }}" \
+            --data-urlencode "author=${{ github.actor }}"
