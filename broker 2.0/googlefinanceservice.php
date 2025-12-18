@@ -43,51 +43,99 @@ class GoogleFinanceService
             throw new InvalidArgumentException('Ticker is empty');
         }
 
+        // Check if this ticker is an alias for another ticker
+        $canonicalTicker = $this->resolveAlias($ticker);
+        $isAlias = ($canonicalTicker !== $ticker);
+        $fetchTicker = $canonicalTicker; // Use canonical for fetching
+
         if (!$forceFresh) {
+            // Try cache for both original and canonical
             $cached = $this->getCachedQuote($ticker);
             if ($cached !== null) {
-                // Validate cached data against mapping too, just in case
                 if ($this->validateAgainstMapping($ticker, $cached['company_name'])) {
                     return $cached;
                 }
             }
+            
+            // If alias, also check canonical cache
+            if ($isAlias) {
+                $cachedCanonical = $this->getCachedQuote($canonicalTicker);
+                if ($cachedCanonical !== null) {
+                    // Return with original ticker ID
+                    $cachedCanonical['ticker'] = $ticker;
+                    $cachedCanonical['_resolved_from'] = $canonicalTicker;
+                    return $cachedCanonical;
+                }
+            }
         }
 
-        $data = $this->fetchFromGoogleFinance($ticker, $targetCurrency, $assetType);
+        $data = $this->fetchFromGoogleFinance($fetchTicker, $targetCurrency, $assetType);
 
         // Fallback: Zkusíme prohodit tečku a pomlčku (např. BRK.B <-> BRK-B)
-        // Toto řeší častý problém nekompatibility mezi Google a Yahoo formáty
         if ($data === null) {
             $altTicker = null;
-            if (strpos($ticker, '.') !== false) {
-                $altTicker = str_replace('.', '-', $ticker);
-            } elseif (strpos($ticker, '-') !== false) {
-                $altTicker = str_replace('-', '.', $ticker);
+            if (strpos($fetchTicker, '.') !== false) {
+                $altTicker = str_replace('.', '-', $fetchTicker);
+            } elseif (strpos($fetchTicker, '-') !== false) {
+                $altTicker = str_replace('-', '.', $fetchTicker);
             }
 
             if ($altTicker) {
                 $dataAlt = $this->fetchFromGoogleFinance($altTicker, $targetCurrency, $assetType);
                 if ($dataAlt !== null) {
                     $data = $dataAlt;
-                    // Důležité: Uložíme data pod PŮVODNÍM tickerem, aby sedělo ID v databázi,
-                    // i když jsme je stáhli pod jiným názvem.
-                    $data['ticker'] = $ticker; 
+                    $data['ticker'] = $fetchTicker; 
                 }
             }
         }
+        
         if ($data === null) {
             return null;
         }
 
+        // Set the ticker to original request (not canonical)
+        $data['ticker'] = $ticker;
+        if ($isAlias) {
+            $data['_resolved_from'] = $canonicalTicker;
+        }
+
         // Validate before saving
         if (!$this->validateAgainstMapping($ticker, $data['company_name'])) {
-            // Log warning or just return null
             return null;
         }
 
+        // Save under original ticker
         $this->saveQuote($ticker, $data);
+        
+        // Also save under canonical if it's an alias
+        if ($isAlias) {
+            $canonicalData = $data;
+            $canonicalData['ticker'] = $canonicalTicker;
+            $this->saveQuote($canonicalTicker, $canonicalData);
+        }
 
         return $data;
+    }
+
+    /**
+     * Resolve ticker alias to canonical ticker
+     * Returns the canonical ticker, or the input ticker if no alias exists
+     */
+    private function resolveAlias(string $ticker): string
+    {
+        try {
+            $stmt = $this->pdo->prepare("SELECT alias_of FROM ticker_mapping WHERE ticker = ? AND alias_of IS NOT NULL LIMIT 1");
+            $stmt->execute([$ticker]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($row && !empty($row['alias_of'])) {
+                return strtoupper($row['alias_of']);
+            }
+        } catch (Exception $e) {
+            // Column might not exist yet, ignore
+        }
+        
+        return $ticker;
     }
 
     /**
