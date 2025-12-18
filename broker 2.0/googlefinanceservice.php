@@ -320,6 +320,109 @@ class GoogleFinanceService
             $stmtH = $this->pdo->prepare($sqlHist);
             $stmtH->execute([$id, $currentPrice]);
         }
+        
+        // Update ticker_mapping and detect aliases based on company_name
+        $companyName = $data['company_name'] ?? null;
+        $currency = $data['currency'] ?? null;
+        if ($companyName) {
+            $this->updateTickerMappingAndDetectAlias($id, $companyName, $currency);
+        }
+    }
+
+    /**
+     * Updates ticker_mapping with company_name and detects potential aliases
+     */
+    private function updateTickerMappingAndDetectAlias(string $ticker, string $companyName, ?string $currency): void
+    {
+        try {
+            // Normalize company name for comparison
+            $normalizedName = $this->normalizeCompanyName($companyName);
+            
+            // Check if this ticker already exists in mapping
+            $stmt = $this->pdo->prepare("SELECT ticker, alias_of, company_name FROM ticker_mapping WHERE ticker = ?");
+            $stmt->execute([$ticker]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If already has an alias, just update company_name
+            if ($existing && !empty($existing['alias_of'])) {
+                $this->pdo->prepare("UPDATE ticker_mapping SET company_name = COALESCE(NULLIF(?, ''), company_name), currency = COALESCE(NULLIF(?, ''), currency), last_verified = NOW() WHERE ticker = ?")
+                    ->execute([$companyName, $currency, $ticker]);
+                return;
+            }
+            
+            // Look for existing tickers with same normalized company name
+            $aliasOf = null;
+            
+            if (strlen($normalizedName) >= 3) {
+                $stmt = $this->pdo->prepare("
+                    SELECT ticker, company_name FROM ticker_mapping 
+                    WHERE ticker != ? 
+                    AND (alias_of IS NULL OR alias_of = '')
+                    AND company_name IS NOT NULL AND company_name != ''
+                ");
+                $stmt->execute([$ticker]);
+                $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                foreach ($candidates as $candidate) {
+                    $candidateNorm = $this->normalizeCompanyName($candidate['company_name']);
+                    
+                    // Exact match after normalization
+                    if ($candidateNorm === $normalizedName) {
+                        $aliasOf = $candidate['ticker'];
+                        break;
+                    }
+                    
+                    // High similarity match
+                    if (strlen($candidateNorm) >= 3) {
+                        similar_text($candidateNorm, $normalizedName, $percent);
+                        if ($percent >= 85) {
+                            $aliasOf = $candidate['ticker'];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Insert or update ticker_mapping
+            $sql = "INSERT INTO ticker_mapping (ticker, company_name, currency, alias_of, status, last_verified)
+                    VALUES (?, ?, ?, ?, 'verified', NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        company_name = COALESCE(NULLIF(VALUES(company_name), ''), company_name),
+                        currency = COALESCE(NULLIF(VALUES(currency), ''), currency),
+                        alias_of = COALESCE(alias_of, VALUES(alias_of)),
+                        last_verified = NOW()";
+            
+            $this->pdo->prepare($sql)->execute([$ticker, $companyName, $currency, $aliasOf]);
+            
+            if ($aliasOf) {
+                error_log("GoogleFinanceService: Detected alias $ticker -> $aliasOf (company: $companyName)");
+            }
+            
+        } catch (Exception $e) {
+            // Column might not exist yet, silently ignore
+            error_log("updateTickerMappingAndDetectAlias error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Normalize company name for comparison
+     */
+    private function normalizeCompanyName(string $name): string
+    {
+        $name = mb_strtolower(trim($name));
+        // Remove common suffixes
+        $suffixes = [' inc', ' inc.', ' corp', ' corp.', ' corporation', ' ag', ' se', ' plc', 
+                     ' ltd', ' ltd.', ' limited', ' group', ' holdings', ' co', ' co.', ' company', 
+                     ' s.a.', ' n.v.', ' class a', ' class b', ' class c', '(class a)', '(class b)',
+                     ' - class a', ' - class b', ' common stock', ' ordinary shares'];
+        foreach ($suffixes as $s) {
+            $name = str_replace($s, '', $name);
+        }
+        // Remove punctuation
+        $name = preg_replace('/[^\p{L}\p{N}\s]/u', '', $name);
+        // Remove extra spaces
+        $name = preg_replace('/\s+/', ' ', $name);
+        return trim($name);
     }
 
     /**
