@@ -1,8 +1,10 @@
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, type SyntheticEvent } from 'react';
 import type {
     TableColumnDefinition,
     TableColumnId,
+    SelectionItemId,
+    OnSelectionChangeData,
 } from '@fluentui/react-components';
 import {
     DataGrid,
@@ -98,6 +100,8 @@ interface SmartDataGridProps<T> {
     withFilterRow?: boolean;
     onFilteredDataChange?: (filteredItems: T[]) => void;
     onRowClick?: (item: T) => void;
+    selectedItems?: Set<SelectionItemId>;
+    onSelectionChange?: (e: SyntheticEvent, data: OnSelectionChangeData) => void;
 }
 
 // Smart Date Parser Helper
@@ -290,7 +294,12 @@ const ColumnHeaderMenu = <T,>({
     );
 };
 
-export const SmartDataGrid = <T,>({ items, columns, getRowId, onFilteredDataChange, onRowClick }: SmartDataGridProps<T>) => {
+export const SmartDataGrid = <T,>({ items, columns, getRowId, withFilterRow = false,
+    onFilteredDataChange,
+    onRowClick,
+    selectedItems,
+    onSelectionChange
+}: SmartDataGridProps<T>) => {
     const styles = useStyles();
     const [filters, setFilters] = useState<Record<string, string>>({});
 
@@ -476,7 +485,15 @@ export const SmartDataGrid = <T,>({ items, columns, getRowId, onFilteredDataChan
 
     // Sticky Header Rendering Helper
     const renderHeader = () => (
-        <DataGrid items={[]} columns={columns} sortable={false} selectionMode="multiselect">
+        <DataGrid
+            items={processedItems}
+            columns={columns}
+            sortable={false}
+            selectionMode="multiselect"
+            getRowId={getRowId}
+            selectedItems={selectedItems}
+            onSelectionChange={onSelectionChange}
+        >
             <DataGridHeader style={{ position: 'sticky', top: 0, zIndex: 2, background: tokens.colorNeutralBackground1 }}>
                 <DataGridRow>
                     {({ item, columnId }: any) => {
@@ -507,6 +524,8 @@ export const SmartDataGrid = <T,>({ items, columns, getRowId, onFilteredDataChan
             sortable={false}
             selectionMode="multiselect"
             getRowId={getRowId}
+            selectedItems={selectedItems}
+            onSelectionChange={onSelectionChange}
         >
             <DataGridBody<T>>
                 {({ item, rowId }) => (
@@ -550,6 +569,8 @@ export const SmartDataGrid = <T,>({ items, columns, getRowId, onFilteredDataChan
                         sortable={false}
                         selectionMode="multiselect"
                         getRowId={getRowId}
+                        selectedItems={selectedItems}
+                        onSelectionChange={onSelectionChange}
                     >
                         <DataGridHeader style={{ position: 'sticky', top: 0, zIndex: 2, background: tokens.colorNeutralBackground1 }}>
                             <DataGridRow>

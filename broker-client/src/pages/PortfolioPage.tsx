@@ -15,6 +15,7 @@ import {
     DialogActions,
     Button
 } from "@fluentui/react-components";
+import type { SelectionItemId, OnSelectionChangeData } from "@fluentui/react-components";
 import { ArrowSync24Regular, Delete24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
@@ -66,6 +67,13 @@ export const PortfolioPage = () => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
+    // Selection
+    const [selectedItems, setSelectedItems] = useState<Set<SelectionItemId>>(new Set());
+
+    const onSelectionChange = useCallback((_: any, data: OnSelectionChangeData) => {
+        setSelectedItems(data.selectedItems);
+    }, []);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -89,8 +97,10 @@ export const PortfolioPage = () => {
     const handleDelete = async () => {
         setDeleting(true);
         try {
-            // Always use filteredItems - when no filter, it equals all items
-            const idsToDelete = filteredItems.map(i => i.trans_id);
+            // Use selected items if any, otherwise filtered items
+            const idsToDelete = selectedItems.size > 0
+                ? Array.from(selectedItems)
+                : filteredItems.map(i => i.trans_id);
 
             if (idsToDelete.length === 0) {
                 alert('Žádné transakce k odstranění.');
@@ -106,6 +116,7 @@ export const PortfolioPage = () => {
             if (res.data.success) {
                 alert(`Úspěšně smazáno ${res.data.deleted} transakcí.`);
                 setDeleteDialogOpen(false);
+                setSelectedItems(new Set());
                 loadData(); // Reload
             } else {
                 alert('Chyba: ' + (res.data.error || 'Neznámá chyba'));
@@ -215,9 +226,11 @@ export const PortfolioPage = () => {
                         appearance="subtle"
                         icon={<Delete24Regular />}
                         onClick={() => setDeleteDialogOpen(true)}
-                        disabled={filteredItems.length === 0}
+                        disabled={selectedItems.size === 0 && filteredItems.length === 0}
                     >
-                        Smazat ({filteredItems.length})
+                        {selectedItems.size > 0
+                            ? `Smazat vybrané (${selectedItems.size})`
+                            : `Smazat zobrazené (${filteredItems.length})`}
                     </ToolbarButton>
                 </Toolbar>
             </PageHeader>
@@ -229,6 +242,8 @@ export const PortfolioPage = () => {
                             columns={columns}
                             getRowId={getRowId}
                             onFilteredDataChange={setFilteredItems}
+                            selectedItems={selectedItems}
+                            onSelectionChange={onSelectionChange}
                         />
                     </div>
                 </div>
@@ -239,11 +254,11 @@ export const PortfolioPage = () => {
                 <DialogSurface>
                     <DialogBody>
                         <DialogTitle>
-                            Smazat {filteredItems.length} transakcí?
+                            Smazat {selectedItems.size > 0 ? `${selectedItems.size} vybraných` : `${filteredItems.length} zobrazených`} transakcí?
                         </DialogTitle>
                         <DialogContent>
                             <Text>
-                                Opravdu chcete smazat {filteredItems.length} transakcí? Tato akce je nevratná.
+                                Opravdu chcete smazat {selectedItems.size > 0 ? selectedItems.size : filteredItems.length} transakcí? Tato akce je nevratná.
                             </Text>
                         </DialogContent>
                         <DialogActions>
