@@ -50,7 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const checkAuth = async () => {
         try {
-            const res = await fetch(`${API_BASE}/ajax-get-user.php`);
+            const res = await fetch(`${API_BASE}/ajax-get-user.php`, {
+                credentials: 'include'
+            });
             const data = await res.json();
             if (data.success && data.user) {
                 setUser({
@@ -76,7 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const res = await fetch(`${API_BASE}/api-login.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password: pass })
+                body: JSON.stringify({ username, password: pass }),
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success && data.user) {
