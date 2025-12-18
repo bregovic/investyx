@@ -14,7 +14,7 @@ import {
     shorthands,
     Switch
 } from "@fluentui/react-components";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from 'react-router-dom';
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
@@ -968,15 +968,17 @@ const RequestsPage = () => {
                             </div>
                         </div>
                     </div>
-                    <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium }}>
-                        {loadingRequests ? <Spinner /> : (
-                            <SmartDataGrid
-                                items={requests.filter(r => selectedStatuses.includes(r.status))}
-                                columns={columns}
-                                getRowId={(i) => i.id}
-                                onRowClick={setSelectedRequest}
-                            />
-                        )}
+                    <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium, overflow: 'auto' }}>
+                        <div style={{ minWidth: '1000px', height: '100%' }}>
+                            {loadingRequests ? <Spinner /> : (
+                                <SmartDataGrid
+                                    items={requests.filter(r => selectedStatuses.includes(r.status))}
+                                    columns={columns}
+                                    getRowId={(i) => i.id}
+                                    onRowClick={setSelectedRequest}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             </PageContent>

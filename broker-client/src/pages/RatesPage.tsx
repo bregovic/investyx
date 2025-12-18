@@ -160,18 +160,20 @@ export const RatesPage = () => {
 
                 {!loading && !error && (
                     <div className={styles.tableContainer}>
-                        <SmartDataGrid
-                            items={items}
-                            columns={[
-                                { columnId: 'date', renderHeaderCell: () => t('col_date'), renderCell: (item: RateItem) => new Date(item.date).toLocaleDateString(t('locale') === 'en' ? 'en-US' : 'cs-CZ'), compare: (a, b) => a.date.localeCompare(b.date), minWidth: 100 },
-                                { columnId: 'currency', renderHeaderCell: () => t('col_currency'), renderCell: (item: RateItem) => <span style={{ fontWeight: 'bold' }}>{item.currency}</span>, compare: (a, b) => a.currency.localeCompare(b.currency), minWidth: 80 },
-                                { columnId: 'amount', renderHeaderCell: () => t('col_quantity'), renderCell: (item: RateItem) => item.amount.toLocaleString(), compare: (a, b) => a.amount - b.amount, minWidth: 80 },
-                                { columnId: 'rate', renderHeaderCell: () => t('col_rate_czk'), renderCell: (item: RateItem) => item.rate.toFixed(4), compare: (a, b) => a.rate - b.rate, minWidth: 100 },
-                                { columnId: 'rate_per_1', renderHeaderCell: () => t('col_unit'), renderCell: (item: RateItem) => item.rate_per_1.toFixed(4), compare: (a, b) => a.rate_per_1 - b.rate_per_1, minWidth: 100 },
-                                { columnId: 'source', renderHeaderCell: () => t('col_source'), renderCell: (item: RateItem) => item.source, compare: (a, b) => a.source.localeCompare(b.source), minWidth: 100 },
-                            ]}
-                            getRowId={(item) => item.id}
-                        />
+                        <div style={{ minWidth: '800px' }}>
+                            <SmartDataGrid
+                                items={items}
+                                columns={[
+                                    { columnId: 'date', renderHeaderCell: () => t('col_date'), renderCell: (item: RateItem) => new Date(item.date).toLocaleDateString(t('locale') === 'en' ? 'en-US' : 'cs-CZ'), compare: (a, b) => a.date.localeCompare(b.date), minWidth: 100 },
+                                    { columnId: 'currency', renderHeaderCell: () => t('col_currency'), renderCell: (item: RateItem) => <span style={{ fontWeight: 'bold' }}>{item.currency}</span>, compare: (a, b) => a.currency.localeCompare(b.currency), minWidth: 80 },
+                                    { columnId: 'amount', renderHeaderCell: () => t('col_quantity'), renderCell: (item: RateItem) => item.amount.toLocaleString(), compare: (a, b) => a.amount - b.amount, minWidth: 80 },
+                                    { columnId: 'rate', renderHeaderCell: () => t('col_rate_czk'), renderCell: (item: RateItem) => item.rate.toFixed(4), compare: (a, b) => a.rate - b.rate, minWidth: 100 },
+                                    { columnId: 'rate_per_1', renderHeaderCell: () => t('col_unit'), renderCell: (item: RateItem) => item.rate_per_1.toFixed(4), compare: (a, b) => a.rate_per_1 - b.rate_per_1, minWidth: 100 },
+                                    { columnId: 'source', renderHeaderCell: () => t('col_source'), renderCell: (item: RateItem) => item.source, compare: (a, b) => a.source.localeCompare(b.source), minWidth: 100 },
+                                ]}
+                                getRowId={(item) => item.id}
+                            />
+                        </div>
                     </div>
                 )}
                 {error && <Text>{error}</Text>}

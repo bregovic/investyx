@@ -19,7 +19,7 @@ const useStyles = makeStyles({
     tableContainer: {
         border: `1px solid ${tokens.colorNeutralStroke1}`,
         borderRadius: '8px',
-        overflow: 'hidden',
+        overflow: 'auto',
         backgroundColor: tokens.colorNeutralBackground1,
         display: 'flex',
         flexDirection: 'column'
@@ -171,7 +171,7 @@ export const PortfolioPage = () => {
             </PageHeader>
             <PageContent noScroll>
                 <div className={styles.tableContainer} style={{ flex: 1, minHeight: 0 }}>
-                    <div style={{ height: '100%' }}>
+                    <div style={{ minWidth: '800px', height: '100%' }}>
                         <SmartDataGrid
                             items={items}
                             columns={columns}

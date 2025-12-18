@@ -44,8 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (data.success && data.user) {
                 setUser({
                     id: data.user.id,
-                    username: data.user.name, // Mapping 'name' from API to 'username'
-                    role: data.user.role || 'user', // API might need to return role
+                    username: data.user.name,
+                    role: data.user.role || 'user',
                     name: data.user.name || '',
                     initials: data.user.initials || 'User',
                     assigned_tasks_count: data.user.assigned_tasks_count || 0

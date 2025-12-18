@@ -21,7 +21,7 @@ const useStyles = makeStyles({
     statCard: { padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' },
     statLabel: { color: tokens.colorNeutralForeground2, fontSize: '12px', textTransform: 'uppercase', fontWeight: 600 },
     statValue: { fontSize: '24px', fontWeight: 700, color: tokens.colorNeutralForeground1 },
-    tableContainer: { overflow: 'hidden', backgroundColor: tokens.colorNeutralBackground1, borderRadius: '8px', boxShadow: tokens.shadow2, padding: '16px', display: 'flex', flexDirection: 'column' },
+    tableContainer: { overflow: 'auto', backgroundColor: tokens.colorNeutralBackground1, borderRadius: '8px', boxShadow: tokens.shadow2, padding: '16px', display: 'flex', flexDirection: 'column' },
     positive: { color: tokens.colorPaletteGreenForeground1 },
     negative: { color: tokens.colorPaletteRedForeground1 }
 });
@@ -205,7 +205,7 @@ export const PnLPage = () => {
                     {items.length === 0 ? (
                         <Text>{t('no_sales')}</Text>
                     ) : (
-                        <div style={{ height: '100%' }}>
+                        <div style={{ minWidth: '800px', height: '100%' }}>
                             <SmartDataGrid
                                 items={items}
                                 columns={columns}

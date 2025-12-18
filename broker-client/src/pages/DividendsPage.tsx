@@ -40,7 +40,7 @@ const useStyles = makeStyles({
         color: tokens.colorNeutralForeground1
     },
     tableContainer: {
-        overflow: 'hidden',
+        overflow: 'auto',
         backgroundColor: tokens.colorNeutralBackground1,
         borderRadius: '8px',
         boxShadow: tokens.shadow2,
@@ -231,7 +231,7 @@ export const DividendsPage = () => {
                     {items.length === 0 ? (
                         <Text>{t('no_dividends')}</Text>
                     ) : (
-                        <div style={{ height: '100%' }}>
+                        <div style={{ minWidth: '800px', height: '100%' }}>
                             <SmartDataGrid
                                 items={items}
                                 columns={columns}

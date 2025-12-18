@@ -215,11 +215,13 @@ export const BalancePage = () => {
                 )}
 
                 <div className={styles.tableContainer}>
-                    <SmartDataGrid
-                        items={items}
-                        columns={columns}
-                        getRowId={getRowId}
-                    />
+                    <div style={{ minWidth: '800px' }}>
+                        <SmartDataGrid
+                            items={items}
+                            columns={columns}
+                            getRowId={getRowId}
+                        />
+                    </div>
                 </div>
             </PageContent>
         </PageLayout>

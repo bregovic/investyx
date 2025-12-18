@@ -40,7 +40,7 @@ const useStyles = makeStyles({
         backgroundColor: tokens.colorNeutralBackground1,
         border: `1px solid ${tokens.colorNeutralStroke1}`,
         borderRadius: '8px',
-        overflow: 'hidden',
+        overflow: 'auto', // Allow scroll
         display: 'flex',
         flexDirection: 'column'
     },
