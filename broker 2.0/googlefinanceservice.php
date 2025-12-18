@@ -640,6 +640,18 @@ class GoogleFinanceService
                              $data['currency'] = 'GBP';
                         } elseif ($data['exchange'] === 'TSE') {
                              $data['currency'] = 'JPY';
+                        } elseif (preg_match('/\.DE$/', $code)) {
+                             // German stocks (.DE suffix) are in EUR
+                             $data['currency'] = 'EUR';
+                        } elseif (preg_match('/\.L$/', $code)) {
+                             // London stocks are in GBP (or GBX)
+                             $data['currency'] = 'GBP';
+                        } elseif (preg_match('/\.PA$/', $code)) {
+                             // Paris stocks are in EUR
+                             $data['currency'] = 'EUR';
+                        } elseif (preg_match('/\.AS$/', $code)) {
+                             // Amsterdam stocks are in EUR
+                             $data['currency'] = 'EUR';
                         }
                         
                         break; // máme data, konec
