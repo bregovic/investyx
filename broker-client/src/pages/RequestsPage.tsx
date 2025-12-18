@@ -981,19 +981,18 @@ const RequestsPage = () => {
                             </Popover>
                         </div>
                     </div>
-                </div>
-                <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium, overflow: 'auto' }}>
-                    <div style={{ minWidth: '1000px', height: '100%' }}>
-                        {loadingRequests ? <Spinner /> : (
-                            <SmartDataGrid
-                                items={requests.filter(r => selectedStatuses.includes(r.status))}
-                                columns={columns}
-                                getRowId={(i) => i.id}
-                                onRowClick={setSelectedRequest}
-                            />
-                        )}
+                    <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium, overflow: 'auto' }}>
+                        <div style={{ minWidth: '1000px', height: '100%' }}>
+                            {loadingRequests ? <Spinner /> : (
+                                <SmartDataGrid
+                                    items={requests.filter(r => selectedStatuses.includes(r.status))}
+                                    columns={columns}
+                                    getRowId={(i) => i.id}
+                                    onRowClick={setSelectedRequest}
+                                />
+                            )}
+                        </div>
                     </div>
-                </div>
             </PageContent>
         </PageLayout >
     );
