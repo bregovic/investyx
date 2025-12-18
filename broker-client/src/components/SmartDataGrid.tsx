@@ -294,7 +294,7 @@ const ColumnHeaderMenu = <T,>({
     );
 };
 
-export const SmartDataGrid = <T,>({ items, columns, getRowId, withFilterRow = false,
+export const SmartDataGrid = <T,>({ items, columns, getRowId,
     onFilteredDataChange,
     onRowClick,
     selectedItems,
