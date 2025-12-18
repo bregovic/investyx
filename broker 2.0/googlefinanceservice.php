@@ -518,6 +518,18 @@ class GoogleFinanceService
             $candidates[] = $ticker . '.AS'; // Amsterdam
         }
 
+        // Check Custom Map for Yahoo overrides
+        $customMap = [
+             'ZPRV' => ['ZPRV.DE'],
+             'CBK' => ['CBK.DE'],
+             'LLOY' => ['LLOY.L'],
+             // AVWS on NYSE Arca usually works as AVWS on Yahoo? Let's check.
+             // If AVWS fails, maybe it needs suffix? US stocks usually don't.
+        ];
+        if (isset($customMap[$ticker])) {
+            $candidates = array_merge($candidates, $customMap[$ticker]);
+        }
+
         foreach ($candidates as $yTicker) {
             try {
                 $url = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($yTicker) . "?interval=1d&range=1d";
