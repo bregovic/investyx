@@ -11,6 +11,8 @@
  *   require_once __DIR__ . '/googlefinanceservice.php';
  *   $service = new GoogleFinanceService($pdo, 0);
  *   $data = $service->getQuote('AAPL', true);
+ *
+ *   V2.1 - Yahoo Fallback added
  */
 class GoogleFinanceService
 {
