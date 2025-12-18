@@ -46,6 +46,9 @@ export default class RevolutParser extends BaseParser {
                 if (firstLine.includes('commodity') || firstLine.includes('underlying') || (firstLine.includes('asset') && firstLine.includes('type'))) {
                     return this.commodityParser.parseCsv(content);
                 }
+
+                // Default CSV to Trading (Stocks)
+                return this.parseTradingCsv(content);
             }
 
             // Default to Trading (PDF) logic
@@ -296,5 +299,123 @@ export default class RevolutParser extends BaseParser {
             }
         }
         return parseFloat(clean) || 0;
+    }
+
+    private parseTradingCsv(content: string): Transaction[] {
+        const rows = this.parseCSV(content); // BaseParser helper
+        if (rows.length < 2) return [];
+
+        // Simple header map based on V4 logic
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+
+        const getIdx = (candidates: string[]) => headers.findIndex(h => candidates.some(c => h.includes(c)));
+
+        const map = {
+            date: getIdx(['date', 'datum', 'time', 'started date']),
+            ticker: getIdx(['ticker', 'symbol']),
+            type: getIdx(['type', 'typ']),
+            quantity: getIdx(['quantity', 'množství']),
+            price: getIdx(['price per share', 'price', 'cena']),
+            total: getIdx(['total amount', 'total', 'celkem', 'amount']),
+            currency: getIdx(['currency', 'měna']),
+            fxRate: getIdx(['fx rate', 'kurz'])
+        };
+
+        // If critical cols missing, try to parse anyway if type is present?
+        // But without type we can't do much.
+        if (map.type === -1) return [];
+
+        const transactions: Transaction[] = [];
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length < 2) continue; // Skip empty rows
+
+            const getVal = (idx: number) => (idx !== -1 && row[idx]) ? row[idx] : '';
+
+            const rawType = getVal(map.type).toUpperCase();
+            const ticker = getVal(map.ticker);
+
+            // Logic port from V4
+            let transType = 'Other';
+            let productType = 'Stock';
+            let txId = ticker;
+            let notes = `Import CSV: ${rawType}`;
+
+            let qty = this.parseNumber(getVal(map.quantity));
+            let price = this.parseNumber(getVal(map.price));
+
+            const totalStr = getVal(map.total);
+            const totalData = this.extractCurrencyAndNumber(totalStr);
+            let totalAmount = totalData.num ?? this.parseNumber(totalStr);
+            let cur = getVal(map.currency).toUpperCase() || totalData.currency || 'USD';
+
+            const fxRate = this.parseNumber(getVal(map.fxRate));
+
+            // Date parsing
+            let date = '';
+            const dStr = getVal(map.date);
+            if (dStr) {
+                // Try ISO
+                if (dStr.includes('T')) date = dStr.split('T')[0];
+                else {
+                    const d = new Date(dStr);
+                    if (!isNaN(d.getTime())) date = d.toISOString().split('T')[0];
+                }
+            }
+
+            // Type switching
+            if (['BUY', 'BUY - MARKET', 'BUY - LIMIT'].some(t => rawType.includes(t))) {
+                transType = 'Buy';
+            } else if (['SELL', 'SELL - MARKET', 'SELL - LIMIT'].some(t => rawType.includes(t))) {
+                transType = 'Sell';
+            } else if (rawType.includes('DIVIDEND')) {
+                transType = 'Dividend';
+                qty = 1;
+                price = totalAmount;
+            } else if (rawType.includes('CUSTODY') || rawType.includes('FEE')) {
+                transType = 'Fee';
+                productType = 'Fee';
+                txId = 'FEE_CUSTODY';
+                qty = 1;
+                price = Math.abs(totalAmount);
+                totalAmount = -Math.abs(totalAmount);
+            } else if (rawType.includes('CASH TOP-UP') || rawType.includes('DEPOSIT')) {
+                transType = 'Deposit';
+                productType = 'Cash';
+                txId = 'CASH_' + cur;
+                qty = 1;
+                price = totalAmount;
+            } else if (rawType.includes('WITHDRAWAL')) {
+                transType = 'Withdrawal';
+                productType = 'Cash';
+                txId = 'CASH_' + cur;
+                qty = 1;
+                price = totalAmount;
+            }
+
+            if (transType === 'Other' && !ticker) continue; // Skip unknown garbage
+
+            const tx: Transaction = {
+                date,
+                id: txId,
+                amount: Math.abs(qty),
+                price: Math.abs(price),
+                amount_cur: totalAmount,
+                currency: cur,
+                platform: 'Revolut',
+                product_type: productType,
+                trans_type: transType,
+                notes,
+                fees: (transType === 'Fee') ? Math.abs(totalAmount) : 0
+            };
+
+            // @ts-ignore
+            if (fxRate && fxRate !== 1) tx.ex_rate = fxRate;
+
+            transactions.push(tx);
+        }
+
+        return transactions;
     }
 }
