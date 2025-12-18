@@ -6,9 +6,22 @@ import {
     Text,
     Badge,
     Toolbar,
-    ToolbarButton
+    ToolbarButton,
+    Menu,
+    MenuTrigger,
+    MenuPopover,
+    MenuList,
+    MenuItem,
+    MenuDivider,
+    Dialog,
+    DialogSurface,
+    DialogBody,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button
 } from "@fluentui/react-components";
-import { ArrowSync24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Delete24Regular, MoreHorizontal24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
@@ -54,6 +67,12 @@ export const PortfolioPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Delete functionality state
+    const [filteredItems, setFilteredItems] = useState<TransactionItem[]>([]);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteMode, setDeleteMode] = useState<'filtered' | 'all'>('filtered');
+    const [deleting, setDeleting] = useState(false);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -71,6 +90,38 @@ export const PortfolioPage = () => {
             setError('Chyba komunikace se serverem.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const idsToDelete = deleteMode === 'all'
+                ? items.map(i => i.trans_id)
+                : filteredItems.map(i => i.trans_id);
+
+            if (idsToDelete.length === 0) {
+                alert('Žádné transakce k odstranění.');
+                setDeleteDialogOpen(false);
+                setDeleting(false);
+                return;
+            }
+
+            const res = await axios.post('/investyx/api-delete-transactions.php', {
+                ids: idsToDelete
+            });
+
+            if (res.data.success) {
+                alert(`Úspěšně smazáno ${res.data.deleted} transakcí.`);
+                setDeleteDialogOpen(false);
+                loadData(); // Reload
+            } else {
+                alert('Chyba: ' + (res.data.error || 'Neznámá chyba'));
+            }
+        } catch (e: any) {
+            alert('Chyba při mazání: ' + e.message);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -167,6 +218,33 @@ export const PortfolioPage = () => {
                     <ToolbarButton appearance="subtle" icon={<ArrowSync24Regular />} onClick={loadData}>
                         {t('refresh') || 'Obnovit'}
                     </ToolbarButton>
+
+                    <Menu>
+                        <MenuTrigger disableButtonEnhancement>
+                            <ToolbarButton appearance="subtle" icon={<MoreHorizontal24Regular />}>
+                                Akce
+                            </ToolbarButton>
+                        </MenuTrigger>
+                        <MenuPopover>
+                            <MenuList>
+                                <MenuItem
+                                    icon={<Delete24Regular />}
+                                    onClick={() => { setDeleteMode('filtered'); setDeleteDialogOpen(true); }}
+                                    disabled={filteredItems.length === 0}
+                                >
+                                    Smazat filtrované ({filteredItems.length})
+                                </MenuItem>
+                                <MenuDivider />
+                                <MenuItem
+                                    icon={<Delete24Regular />}
+                                    onClick={() => { setDeleteMode('all'); setDeleteDialogOpen(true); }}
+                                    disabled={items.length === 0}
+                                >
+                                    Smazat vše ({items.length})
+                                </MenuItem>
+                            </MenuList>
+                        </MenuPopover>
+                    </Menu>
                 </Toolbar>
             </PageHeader>
             <PageContent noScroll>
@@ -176,10 +254,38 @@ export const PortfolioPage = () => {
                             items={items}
                             columns={columns}
                             getRowId={getRowId}
+                            onFilteredDataChange={setFilteredItems}
                         />
                     </div>
                 </div>
             </PageContent>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={(_, d) => setDeleteDialogOpen(d.open)}>
+                <DialogSurface>
+                    <DialogBody>
+                        <DialogTitle>
+                            {deleteMode === 'all' ? 'Smazat všechny transakce?' : 'Smazat filtrované transakce?'}
+                        </DialogTitle>
+                        <DialogContent>
+                            <Text>
+                                {deleteMode === 'all'
+                                    ? `Opravdu chcete smazat VŠECH ${items.length} transakcí? Tato akce je nevratná.`
+                                    : `Opravdu chcete smazat ${filteredItems.length} filtrovaných transakcí? Tato akce je nevratná.`
+                                }
+                            </Text>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button appearance="secondary" onClick={() => setDeleteDialogOpen(false)}>
+                                Zrušit
+                            </Button>
+                            <Button appearance="primary" onClick={handleDelete} disabled={deleting}>
+                                {deleting ? 'Mažu...' : 'Smazat'}
+                            </Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
         </PageLayout>
     );
 };
