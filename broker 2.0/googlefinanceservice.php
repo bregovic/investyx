@@ -700,11 +700,16 @@ class GoogleFinanceService
                         }
 
                         if ($price > 0) {
+                            // Extract company name from Yahoo response
+                            $companyName = $result['meta']['shortName'] 
+                                ?? $result['meta']['longName'] 
+                                ?? $ticker;
+                            
                             return [
                                 'ticker'         => $ticker, // Keep original ID
                                 'current_price'  => $price,
                                 'change_percent' => $changePct,
-                                'company_name'   => $ticker, // Yahoo doesn't give clean name in chart API usually, or keep original
+                                'company_name'   => $companyName,
                                 'exchange'       => $result['meta']['exchangeName'] ?? 'Yahoo',
                                 'currency'       => $result['meta']['currency'] ?? 'USD',
                             ];
