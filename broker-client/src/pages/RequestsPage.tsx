@@ -993,6 +993,7 @@ const RequestsPage = () => {
                             )}
                         </div>
                     </div>
+                </div>
             </PageContent>
         </PageLayout >
     );
