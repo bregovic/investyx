@@ -495,6 +495,62 @@ class GoogleFinanceService
             }
         }
 
-        return $data['current_price'] ? $data : null;
+        }
+
+        if ($data['current_price']) {
+            return $data;
+        }
+
+        // Fallback: Yahoo Finance for Stocks
+        return $this->fetchFromYahoo($ticker);
+    }
+
+    private function fetchFromYahoo(string $ticker): ?array
+    {
+        // Try raw ticker first (US stocks)
+        $candidates = [$ticker];
+        
+        // Add suffixes for common European cases if ticker doesn't have one
+        if (strpos($ticker, '.') === false) {
+            $candidates[] = $ticker . '.DE'; // Germany
+            $candidates[] = $ticker . '.L';  // London
+            $candidates[] = $ticker . '.PA'; // Paris
+            $candidates[] = $ticker . '.AS'; // Amsterdam
+        }
+
+        foreach ($candidates as $yTicker) {
+            try {
+                $url = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($yTicker) . "?interval=1d&range=1d";
+                $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4]]);
+                $json = @file_get_contents($url, false, $ctx);
+                
+                if ($json) {
+                    $data = json_decode($json, true);
+                    $result = $data['chart']['result'][0] ?? null;
+                    
+                    if ($result && isset($result['meta']['regularMarketPrice'])) {
+                        $price = (float)$result['meta']['regularMarketPrice'];
+                        $prev = (float)($result['meta']['chartPreviousClose'] ?? 0);
+                        $changePct = 0;
+                        if ($prev > 0) {
+                            $changePct = (($price - $prev) / $prev) * 100;
+                        }
+
+                        if ($price > 0) {
+                            return [
+                                'ticker'         => $ticker, // Keep original ID
+                                'current_price'  => $price,
+                                'change_percent' => $changePct,
+                                'company_name'   => $ticker, // Yahoo doesn't give clean name in chart API usually, or keep original
+                                'exchange'       => $result['meta']['exchangeName'] ?? 'Yahoo',
+                                'currency'       => $result['meta']['currency'] ?? 'USD',
+                            ];
+                        }
+                    }
+                }
+            } catch (Exception $e) { /* ignore */ }
+        }
+        
+        return null;
     }
 }
