@@ -137,6 +137,7 @@ function resolveRate(PDO $pdo, string $date, string $currency) {
 
 /**
  * Save or update ticker mapping info
+ * Also detects potential aliases based on company_name or ISIN
  */
 function saveTickerMapping(PDO $pdo, array $txData): void {
     $ticker = strtoupper(trim($txData['id'] ?? ''));
@@ -155,14 +156,93 @@ function saveTickerMapping(PDO $pdo, array $txData): void {
     }
     
     try {
+        // First, check if this ticker already exists
+        $existingStmt = $pdo->prepare("SELECT ticker, alias_of FROM ticker_mapping WHERE ticker = ?");
+        $existingStmt->execute([$ticker]);
+        $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // If ticker already has an alias set, don't override
+        if ($existing && !empty($existing['alias_of'])) {
+            // Just update other fields if needed
+            $sql = "UPDATE ticker_mapping SET 
+                        company_name = COALESCE(NULLIF(:company, ''), company_name),
+                        isin = COALESCE(NULLIF(:isin, ''), isin),
+                        currency = COALESCE(NULLIF(:currency, ''), currency),
+                        last_verified = NOW()
+                    WHERE ticker = :ticker";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':ticker' => $ticker,
+                ':company' => $companyName,
+                ':isin' => $isin,
+                ':currency' => $currency
+            ]);
+            return;
+        }
+        
+        // Detect potential alias - look for existing ticker with same company name or ISIN
+        $aliasOf = null;
+        
+        // Normalize company name for comparison
+        $normalizedName = normalizeCompanyName($companyName);
+        
+        if (!empty($isin)) {
+            // Check by ISIN first (more reliable)
+            $isinStmt = $pdo->prepare("
+                SELECT ticker FROM ticker_mapping 
+                WHERE isin = ? AND ticker != ? AND (alias_of IS NULL OR alias_of = '')
+                ORDER BY last_verified DESC 
+                LIMIT 1
+            ");
+            $isinStmt->execute([$isin, $ticker]);
+            $match = $isinStmt->fetchColumn();
+            if ($match) {
+                $aliasOf = $match;
+            }
+        }
+        
+        if (!$aliasOf && !empty($normalizedName) && strlen($normalizedName) >= 3) {
+            // Check by normalized company name
+            $nameStmt = $pdo->prepare("
+                SELECT ticker, company_name FROM ticker_mapping 
+                WHERE ticker != ? AND (alias_of IS NULL OR alias_of = '')
+                AND company_name IS NOT NULL AND company_name != ''
+            ");
+            $nameStmt->execute([$ticker]);
+            $candidates = $nameStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($candidates as $candidate) {
+                $candidateNorm = normalizeCompanyName($candidate['company_name']);
+                if ($candidateNorm === $normalizedName) {
+                    // Exact match after normalization
+                    $aliasOf = $candidate['ticker'];
+                    break;
+                }
+                // Partial match - if one contains the other and they're reasonably similar
+                if (strlen($candidateNorm) >= 3 && strlen($normalizedName) >= 3) {
+                    if (strpos($candidateNorm, $normalizedName) !== false || 
+                        strpos($normalizedName, $candidateNorm) !== false) {
+                        // Calculate similarity
+                        similar_text($candidateNorm, $normalizedName, $percent);
+                        if ($percent >= 85) {
+                            $aliasOf = $candidate['ticker'];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Insert or update
         $sql = "INSERT INTO ticker_mapping 
-                    (ticker, company_name, isin, currency, status, last_verified)
+                    (ticker, company_name, isin, currency, alias_of, status, last_verified)
                 VALUES 
-                    (:ticker, :company, :isin, :currency, 'needs_review', NOW())
+                    (:ticker, :company, :isin, :currency, :alias_of, 'needs_review', NOW())
                 ON DUPLICATE KEY UPDATE
                     company_name = COALESCE(NULLIF(:company, ''), company_name),
                     isin = COALESCE(NULLIF(:isin, ''), isin),
                     currency = COALESCE(NULLIF(:currency, ''), currency),
+                    alias_of = COALESCE(alias_of, :alias_of),
                     last_verified = NOW()";
         
         $stmt = $pdo->prepare($sql);
@@ -170,12 +250,39 @@ function saveTickerMapping(PDO $pdo, array $txData): void {
             ':ticker' => $ticker,
             ':company' => $companyName,
             ':isin' => $isin,
-            ':currency' => $currency
+            ':currency' => $currency,
+            ':alias_of' => $aliasOf
         ]);
+        
+        if ($aliasOf) {
+            error_log("Ticker alias detected: $ticker -> $aliasOf (based on " . 
+                      (!empty($isin) ? "ISIN: $isin" : "company: $companyName") . ")");
+        }
+        
     } catch (Exception $e) {
         // Silent fail - mapping is optional
         error_log("saveTickerMapping failed for $ticker: " . $e->getMessage());
     }
+}
+
+/**
+ * Normalize company name for comparison
+ */
+function normalizeCompanyName(string $name): string {
+    $name = mb_strtolower(trim($name));
+    // Remove common suffixes
+    $suffixes = [' inc', ' inc.', ' corp', ' corp.', ' corporation', ' ag', ' se', ' plc', 
+                 ' ltd', ' ltd.', ' limited', ' group', ' holdings', ' co', ' co.', ' company', 
+                 ' s.a.', ' n.v.', ' class a', ' class b', ' class c', '(class a)', '(class b)',
+                 ' - class a', ' - class b', ' common stock', ' ordinary shares'];
+    foreach ($suffixes as $s) {
+        $name = str_replace($s, '', $name);
+    }
+    // Remove punctuation
+    $name = preg_replace('/[^\p{L}\p{N}\s]/u', '', $name);
+    // Remove extra spaces
+    $name = preg_replace('/\s+/', ' ', $name);
+    return trim($name);
 }
 
 /**
