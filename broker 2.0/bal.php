@@ -815,7 +815,7 @@ if ($pdo && $currentUserId) {
         }
 
         // Defined known crypto tickers
-        $cryptoTickers = ['BTC', 'ETH', 'ADA', 'DOT', 'SOL', 'MATIC', 'AVAX', 'LINK', 'UNI', 'ATOM', 'XRP', 'LTC', 'BCH', 'DOGE', 'SHIB','CBK']; 
+        $cryptoTickers = ['BTC', 'ETH', 'ADA', 'DOT', 'SOL', 'MATIC', 'AVAX', 'LINK', 'UNI', 'ATOM', 'XRP', 'LTC', 'BCH', 'DOGE', 'SHIB']; 
         $isCrypto = in_array(strtoupper($ticker), $cryptoTickers, true);
 
         // nákupní průměr + zbývající množství
