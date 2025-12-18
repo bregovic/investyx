@@ -29,8 +29,10 @@ try {
     $author = $_GET['author'] ?? 'GitHub Actions';
     
     // 1. Log to development_history
-    $title = "Nasazení verze " . substr($sha, 0, 7);
-    $description = $msg . "\n\nAutor: " . $author . "\nCommit: " . $sha;
+    $title = "Nasazení: " . $msg;
+    if (strlen($title) > 100) $title = substr($title, 0, 97) . "...";
+
+    $description = "Autor: " . $author . "\nCommit: " . substr($sha, 0, 8) . "\n\nZpráva:\n" . $msg;
     
     $stmt = $pdo->prepare("INSERT INTO development_history (date, title, description, category) VALUES (NOW(), ?, ?, 'deployment')");
     $stmt->execute([$title, $description]);
@@ -42,15 +44,19 @@ try {
     if (!empty($matches[1])) {
         foreach ($matches[1] as $taskId) {
             $taskId = (int)$taskId;
-            // Check if task exists and update status to 'Done'
-            $check = $pdo->prepare("SELECT id, status FROM changerequest_log WHERE id = ?");
+            // Check if task exists and update status to 'Testing'
+            $check = $pdo->prepare("SELECT id, status, subject FROM changerequest_log WHERE id = ?");
             $check->execute([$taskId]);
             $task = $check->fetch();
             
             if ($task) {
                 $oldStatus = $task['status'];
-                $newStatus = 'Done';
+                $newStatus = 'Testing'; 
                 
+                // Update history title if we found a task
+                $newTitle = "Nasazení: " . $task['subject'] . " (#" . $taskId . ")";
+                $pdo->prepare("UPDATE development_history SET title = ?, related_task_id = ? WHERE id = ?")->execute([$newTitle, $taskId, $historyId]);
+
                 if ($oldStatus !== $newStatus) {
                     $update = $pdo->prepare("UPDATE changerequest_log SET status = ?, updated_at = NOW() WHERE id = ?");
                     $update->execute([$newStatus, $taskId]);
@@ -58,9 +64,6 @@ try {
                     // Log to history
                     $log = $pdo->prepare("INSERT INTO changerequest_history (request_id, user_id, username, change_type, old_value, new_value) VALUES (?, 0, 'System', 'status', ?, ?)");
                     $log->execute([$taskId, $oldStatus, $newStatus]);
-                    
-                    // Link history to task
-                    $pdo->prepare("UPDATE development_history SET related_task_id = ? WHERE id = ?")->execute([$taskId, $historyId]);
                     
                     $updatedTasks[] = $taskId;
                 }
