@@ -65,6 +65,11 @@ try {
                     $log = $pdo->prepare("INSERT INTO changerequest_history (request_id, user_id, username, change_type, old_value, new_value) VALUES (?, 0, 'System', 'status', ?, ?)");
                     $log->execute([$taskId, $oldStatus, $newStatus]);
                     
+                    // Add a comment to the task discussion
+                    $commentText = "**Automatické nasazení**\n\nAutor: " . $author . "\nZpráva: " . $msg . "\nVerze: " . substr($sha, 0, 8);
+                    $stmtComment = $pdo->prepare("INSERT INTO changerequest_comments (request_id, user_id, username, comment, created_at) VALUES (?, 0, 'System', ?, NOW())");
+                    $stmtComment->execute([$taskId, $commentText]);
+                    
                     $updatedTasks[] = $taskId;
                 }
             }
