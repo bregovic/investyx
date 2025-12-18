@@ -12,8 +12,12 @@ import {
     Dialog,
     DialogSurface,
     shorthands,
-    Switch
+    Switch,
+    Popover,
+    PopoverTrigger,
+    PopoverSurface
 } from "@fluentui/react-components";
+import { Filter24Regular } from "@fluentui/react-icons";
 import { useState, useEffect } from "react";
 import { useSearchParams } from 'react-router-dom';
 import axios from "axios";
@@ -294,7 +298,8 @@ const RequestsPage = () => {
 
     // Filter
     const allStatuses = ['New', 'New feature', 'Analysis', 'Development', 'Back to development', 'Testing', 'Testing AI', 'Done', 'Duplicity', 'Canceled'];
-    const defaultActiveStatuses = ['New', 'New feature', 'Analysis', 'Development', 'Back to development', 'Testing', 'Testing AI'];
+    // Exclude: 'Back to development', 'New feature', 'Testing AI' (as per user request)
+    const defaultActiveStatuses = ['New', 'Analysis', 'Development', 'Testing'];
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(defaultActiveStatuses);
 
     // Comments
@@ -951,38 +956,46 @@ const RequestsPage = () => {
                                     }}
                                 />
                             </div>
-                            <div style={{ width: '1px', height: '20px', backgroundColor: tokens.colorNeutralStroke2 }} />
-                            <Text weight="semibold">Filtr stavů:</Text>
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                {allStatuses.map(s => (
-                                    <Checkbox
-                                        key={s}
-                                        label={s}
-                                        checked={selectedStatuses.includes(s)}
-                                        onChange={(_, data) => {
-                                            if (data.checked) setSelectedStatuses(prev => [...prev, s]);
-                                            else setSelectedStatuses(prev => prev.filter(x => x !== s));
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium, overflow: 'auto' }}>
-                        <div style={{ minWidth: '1000px', height: '100%' }}>
-                            {loadingRequests ? <Spinner /> : (
-                                <SmartDataGrid
-                                    items={requests.filter(r => selectedStatuses.includes(r.status))}
-                                    columns={columns}
-                                    getRowId={(i) => i.id}
-                                    onRowClick={setSelectedRequest}
-                                />
-                            )}
+                            <Popover trapFocus>
+                                <PopoverTrigger disableButtonEnhancement>
+                                    <Button icon={<Filter24Regular />}>
+                                        Stavy {selectedStatuses.length < allStatuses.length ? `(${selectedStatuses.length})` : ''}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverSurface>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <Text weight="semibold" style={{ marginBottom: '8px' }}>Filtrovat stavy</Text>
+                                        {allStatuses.map(s => (
+                                            <Checkbox
+                                                key={s}
+                                                label={s}
+                                                checked={selectedStatuses.includes(s)}
+                                                onChange={(_, data) => {
+                                                    if (data.checked) setSelectedStatuses(prev => [...prev, s]);
+                                                    else setSelectedStatuses(prev => prev.filter(x => x !== s));
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </PopoverSurface>
+                            </Popover>
                         </div>
                     </div>
                 </div>
+                <div style={{ flex: 1, minHeight: 0, boxShadow: tokens.shadow2, borderRadius: tokens.borderRadiusMedium, overflow: 'auto' }}>
+                    <div style={{ minWidth: '1000px', height: '100%' }}>
+                        {loadingRequests ? <Spinner /> : (
+                            <SmartDataGrid
+                                items={requests.filter(r => selectedStatuses.includes(r.status))}
+                                columns={columns}
+                                getRowId={(i) => i.id}
+                                onRowClick={setSelectedRequest}
+                            />
+                        )}
+                    </div>
+                </div>
             </PageContent>
-        </PageLayout>
+        </PageLayout >
     );
 };
 
