@@ -131,7 +131,15 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
     // Detect logic
     let provider = 'unknown';
     if (text.includes('Trading 212') || text.includes('Action,Time,ISIN')) provider = 't212';
-    else if (text.includes('Revolut') || text.includes('Cash top-up') || text.includes('Cash withdrawal')) provider = 'revolut';
+    else if (
+        text.includes('Revolut') ||
+        text.includes('Cash top-up') ||
+        text.includes('Cash withdrawal') ||
+        // CSV headers detection for Revolut (Crypto/Commodity/Trading)
+        (text.toLowerCase().includes('symbol') && text.toLowerCase().includes('type') && (text.toLowerCase().includes('quantity') || text.toLowerCase().includes('amount'))) ||
+        (text.toLowerCase().includes('ticker') && text.toLowerCase().includes('type') && text.toLowerCase().includes('quantity')) ||
+        (text.toLowerCase().includes('commodity') && text.toLowerCase().includes('type'))
+    ) provider = 'revolut';
     else if (text.includes('Fio banka') || text.includes('Id transakce')) provider = 'fio';
 
     if (provider === 'unknown') {

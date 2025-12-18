@@ -1,7 +1,12 @@
 
 import BaseParser, { type Transaction } from './BaseParser';
+import RevolutCryptoParser from './RevolutCryptoParser';
+import RevolutCommodityParser from './RevolutCommodityParser';
 
 export default class RevolutParser extends BaseParser {
+
+    private cryptoParser = new RevolutCryptoParser();
+    private commodityParser = new RevolutCommodityParser();
 
     private monthMap: Record<string, string> = {
         'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
@@ -13,14 +18,44 @@ export default class RevolutParser extends BaseParser {
         'červenec': '07', 'srpen': '08', 'září': '09', 'říjen': '10', 'listopad': '11', 'prosinec': '12'
     };
 
+    /**
+     * Dispatcher method to choose the right parser based on content.
+     */
     async parse(content: any): Promise<Transaction[]> {
+        // 1. Detect Type from String (PDF Text or CSV Text)
         if (typeof content === 'string') {
-            return this.parsePdf(content);
+            // Check for Crypto Metadata
+            if (/Výpis z účtu s kryptoměnami|Crypto (Account )?Statement|Revolut Digital Assets Europe Ltd|Odměna ze stakingu/i.test(content)) {
+                return this.cryptoParser.parse(content);
+            }
+            // Check for Commodity Metadata
+            if (/Výpis v\s+(XAU|XAG|XPT|XPD)|Směněno na\s+(XAU|XAG|XPT|XPD)|Commodity (Account )?Statement/i.test(content)) {
+                return this.commodityParser.parse(content);
+            }
+
+            // CSV Detection (Basic) - if it looks like CSV and not PDF
+            // Note: ImportProcessor passes text content.
+            const isCsv = (content.includes(',') || content.includes(';')) && !content.includes('%PDF-') && content.split('\n').length > 1;
+            if (isCsv) {
+                const firstLine = content.split('\n')[0].toLowerCase();
+                // Crypto CSV headers usually contain 'symbol' and 'type' or 'crypto'
+                if ((firstLine.includes('symbol') || firstLine.includes('ticker') || firstLine.includes('crypto')) && (firstLine.includes('type') || firstLine.includes('typ'))) {
+                    return this.cryptoParser.parseCsv(content);
+                }
+                // Commodity CSV
+                if (firstLine.includes('commodity') || firstLine.includes('underlying') || (firstLine.includes('asset') && firstLine.includes('type'))) {
+                    return this.commodityParser.parseCsv(content);
+                }
+            }
+
+            // Default to Trading (PDF) logic
+            return this.parseTradingPdf(content);
         }
-        throw new Error('CSV format not supported yet for Revolut in this version.');
+
+        throw new Error('Unsupported content format for Revolut parser.');
     }
 
-    parsePdf(text: string): Transaction[] {
+    parseTradingPdf(text: string): Transaction[] {
         // Extract ticker mappings
         const mappingText = text.replace(/\u00A0/g, ' ');
         const tickerMappings = this.extractTickerMappings(mappingText);

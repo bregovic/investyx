@@ -64,6 +64,58 @@ export default class BaseParser {
         return `${year}-${month}-${day}`;
     }
 
+    enDateToISO(dateStr: string): string {
+        const monthMap: Record<string, number> = {
+            Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+            Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12
+        };
+
+        const match = String(dateStr).match(/(\d{1,2})\s([A-Za-z]{3})\s(\d{4})/);
+        if (!match) return '';
+
+        const day = match[1].padStart(2, '0');
+        const month = String(monthMap[match[2]] || 1).padStart(2, '0');
+        const year = match[3];
+
+        return `${year}-${month}-${day}`;
+    }
+
+    extractCurrencyAndNumber(value: any): { num: number | null, currency: string | null } {
+        if (value == null) return { num: null, currency: null };
+
+        let str = String(value).trim();
+
+        // Extract currency code
+        const currencyMatch = str.match(/\b(AUD|CAD|CHF|CZK|DKK|EUR|GBP|HUF|JPY|NOK|PLN|SEK|USD|CNY)\b/i);
+        const currency = currencyMatch ? currencyMatch[1].toUpperCase() : null;
+
+        // Remove currency and parse number
+        str = str.replace(/\b[A-Z]{3}\b/gi, '').replace(/\u00a0| /g, '');
+
+        const hasDot = str.includes('.');
+        const hasComma = str.includes(',');
+
+        if (hasComma && hasDot) {
+            const lastDot = str.lastIndexOf('.');
+            const lastComma = str.lastIndexOf(',');
+            if (lastComma > lastDot) {
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                str = str.replace(/,/g, '');
+            }
+        } else if (hasComma && !hasDot) {
+            str = str.replace(',', '.');
+        }
+
+        str = str.replace(/[^0-9.\-]/g, '');
+        const num = str === '' ? null : Number(str);
+
+        return {
+            num: isNaN(num!) ? null : num,
+            currency
+        };
+    }
+
     mapHeaders(headers: string[]): Record<string, number> {
         const map: Record<string, number> = {};
         headers.forEach((h, i) => {
