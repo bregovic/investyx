@@ -61,16 +61,26 @@ try {
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // 4. Aggregate
+    // Support groupBy parameter: 'ticker_platform' (default, detailed) or 'ticker' (aggregated)
+    $groupBy = $_GET['groupBy'] ?? 'ticker_platform';
+    
     $groups = [];
     foreach ($rows as $r) {
-        $key = $r['id'];
-        if(!$key) continue;
+        $ticker = $r['id'];
+        if(!$ticker) continue;
         // Filter out Cash/Fees from Balance View if they are product_type
         if (in_array($r['product_type'], ['Cash', 'Fee'])) continue; 
 
+        // Create aggregation key based on groupBy parameter
+        if ($groupBy === 'ticker') {
+            $key = $ticker;
+        } else {
+            $key = $ticker . '|' . $r['platform'];
+        }
+
         if (!isset($groups[$key])) {
             $groups[$key] = [
-                'ticker' => $key,
+                'ticker' => $ticker,
                 'currency' => $r['currency'],
                 'platform' => $r['platform'],
                 'net_qty' => 0.0,

@@ -7,9 +7,11 @@ import {
     Badge,
     Card,
     Toolbar,
-    ToolbarButton
+    ToolbarButton,
+    Dropdown,
+    Option
 } from "@fluentui/react-components";
-import { ArrowClockwise24Regular } from "@fluentui/react-icons";
+import { ArrowClockwise24Regular, GroupList24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
@@ -83,15 +85,16 @@ export const BalancePage = () => {
     const [summary, setSummary] = useState<PortfolioSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [groupBy, setGroupBy] = useState<'ticker_platform' | 'ticker'>('ticker_platform');
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [groupBy]);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('/investyx/api-portfolio.php');
+            const res = await axios.get(`/investyx/api-portfolio.php?groupBy=${groupBy}`);
             if (res.data.success) {
                 setItems(res.data.data);
                 setSummary(res.data.summary);
@@ -213,6 +216,18 @@ export const BalancePage = () => {
             <PageHeader>
                 <Toolbar>
                     <ToolbarButton icon={<ArrowClockwise24Regular />} onClick={loadData}>{t('btn_refresh')}</ToolbarButton>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px' }}>
+                        <GroupList24Regular />
+                        <Dropdown
+                            value={groupBy === 'ticker_platform' ? 'Ticker + Platforma' : 'Jen Ticker'}
+                            selectedOptions={[groupBy]}
+                            onOptionSelect={(_, data) => setGroupBy(data.optionValue as 'ticker_platform' | 'ticker')}
+                            style={{ minWidth: '180px' }}
+                        >
+                            <Option value="ticker_platform">Ticker + Platforma</Option>
+                            <Option value="ticker">Jen Ticker (agregovaně)</Option>
+                        </Dropdown>
+                    </div>
                 </Toolbar>
             </PageHeader>
             <PageContent>
