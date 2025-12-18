@@ -56,9 +56,9 @@ if (file_exists($servicePath)) {
             $service = new GoogleFinanceService($pdo, 0);
             echo "Service instantiated.\n";
             
-            $ticker = 'MSFT';
+            $ticker = isset($_GET['ticker']) ? $_GET['ticker'] : 'AVWS';
             echo "Fetching $ticker...\n";
-            $data = $service->getQuote($ticker);
+            $data = $service->getQuote($ticker, true); // Force fresh
             
             if ($data) {
                 echo "Fetch SUCCESS: " . print_r($data, true) . "\n";
