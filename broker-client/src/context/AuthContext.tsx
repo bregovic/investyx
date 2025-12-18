@@ -35,6 +35,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         checkAuth();
+
+        const handleFocus = () => checkAuth();
+        window.addEventListener('focus', handleFocus);
+
+        // Poll every 60 seconds
+        const interval = setInterval(checkAuth, 60000);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            clearInterval(interval);
+        };
     }, []);
 
     const checkAuth = async () => {
