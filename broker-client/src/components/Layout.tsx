@@ -227,7 +227,7 @@ const Layout = () => {
                         <NavItem value="balance" icon={<Savings24Regular />} label={t('nav_balances')} />
                         <NavItem value="rates" icon={<ArrowSwap24Regular />} label={t('nav_rates')} />
                         <NavItem value="import" icon={<ArrowImport24Regular />} label={t('nav_import')} />
-                        {(user?.role === 'admin' || (user?.assigned_tasks_count && user.assigned_tasks_count > 0)) && (
+                        {(user?.role === 'admin' || (!!user?.assigned_tasks_count && user.assigned_tasks_count > 0)) && (
                             <NavItem value="requests" icon={<ClipboardTextEdit24Regular />} label="Správa požadavků" />
                         )}
 
