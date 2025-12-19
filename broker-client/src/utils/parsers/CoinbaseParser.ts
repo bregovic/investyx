@@ -143,7 +143,7 @@ export default class CoinbaseParser extends BaseParser {
         const out: Transaction[] = [];
         const t = String(html);
         const normCur = (s: any) => { const u = (s || '').toString().trim().toUpperCase(); return u === 'KČ' ? 'CZK' : u; };
-        const rowRe = /<tr[^>]*class="[^"]*transaction-row[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi;
+        const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
         let rm;
         while ((rm = rowRe.exec(t)) !== null) {
             const cells: string[] = [];
