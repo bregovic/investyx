@@ -33,25 +33,26 @@ export default class RevolutParser extends BaseParser {
                 return this.commodityParser.parse(content);
             }
 
-            // CSV Detection (Basic) - if it looks like CSV and not PDF
-            // Note: ImportProcessor passes text content.
-            const isCsv = (content.includes(',') || content.includes(';')) && !content.includes('%PDF-') && content.split('\n').length > 1;
+            // CSV Detection
+            const firstLine = content.split('\n')[0].toLowerCase();
+            const hasCsvHeaders = firstLine.includes('type') || firstLine.includes('date') || firstLine.includes('symbol') || firstLine.includes('ticker') || firstLine.includes('commodity') || firstLine.includes('action');
+
+            const isCsv = (content.includes(',') || content.includes(';')) &&
+                !content.includes('%PDF-') &&
+                content.split('\n').length > 1 &&
+                !/Statement|Výpis/i.test(content) &&
+                hasCsvHeaders;
+
             if (isCsv) {
-                const firstLine = content.split('\n')[0].toLowerCase();
-                // Crypto CSV headers usually contain 'symbol' and 'type' or 'crypto'
                 if ((firstLine.includes('symbol') || firstLine.includes('ticker') || firstLine.includes('crypto')) && (firstLine.includes('type') || firstLine.includes('typ'))) {
                     return this.cryptoParser.parseCsv(content);
                 }
-                // Commodity CSV
                 if (firstLine.includes('commodity') || firstLine.includes('underlying') || (firstLine.includes('asset') && firstLine.includes('type'))) {
                     return this.commodityParser.parseCsv(content);
                 }
-
-                // Default CSV to Trading (Stocks)
                 return this.parseTradingCsv(content);
             }
 
-            // Default to Trading (PDF) logic
             return this.parseTradingPdf(content);
         }
 
