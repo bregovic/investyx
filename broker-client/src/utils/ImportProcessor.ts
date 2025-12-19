@@ -144,7 +144,7 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
         (text.toLowerCase().includes('commodity') && text.toLowerCase().includes('type'))
     ) provider = 'revolut';
     else if (text.includes('Fio banka') || text.includes('FIO BANKA') || text.includes('Id transakce')) provider = 'fio';
-    else if (text.includes('Coinbase') || (text.includes('Timestamp') && text.toLowerCase().includes('transaction type'))) provider = 'coinbase';
+    else if (text.toLowerCase().includes('coinbase') || (text.toLowerCase().includes('transaction history report')) || (text.toLowerCase().includes('timestamp') && text.toLowerCase().includes('transaction type') && text.toLowerCase().includes('asset') && text.toLowerCase().includes('quantity'))) provider = 'coinbase';
     else if (text.includes('Interactive Brokers') || text.includes('Activity Statement')) provider = 'ibkr';
 
     if (provider === 'unknown') {
