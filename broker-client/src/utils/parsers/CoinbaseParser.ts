@@ -178,8 +178,15 @@ export default class CoinbaseParser extends BaseParser {
 
             const isReward = /(reward|staking|learn|interest)/i.test(typeRaw);
             const isTrade = /(buy|sell)/i.test(typeRaw);
-            if (!date || (!isReward && !isTrade)) continue;
-            if (!asset || /^(CZK|EUR|USD|GBP|CHF|PLN|HUF|JPY|CNY|AUD|CAD|NOK|SEK)$/i.test(asset)) continue;
+            const isDeposit = /deposit/i.test(typeRaw);
+            const isWithdrawal = /withdrawal/i.test(typeRaw);
+
+            if (!date) continue;
+            if (!isReward && !isTrade && !isDeposit && !isWithdrawal) continue;
+
+            const isFiat = /^(CZK|EUR|USD|GBP|CHF|PLN|HUF|JPY|CNY|AUD|CAD|NOK|SEK)$/i.test(asset);
+            if (isFiat && !isDeposit && !isWithdrawal) continue;
+
 
             if (isReward) {
                 if (!qty) continue;
@@ -194,6 +201,29 @@ export default class CoinbaseParser extends BaseParser {
                 const m = notes.match(/for\s+([0-9\s.,]+)\s*([A-ZČ]{2,3})/i);
                 if (m) { const n = this.parseNumber(m[1]); const c = normCur(m[2]); if (n != null) total = n; if (!priceCur && c) priceCur = c; }
             }
+
+            if (isDeposit || isWithdrawal) {
+                const totalAmount = Math.abs(total ?? 0);
+                if (isFiat) {
+                    out.push({
+                        date, id: `CASH_${asset}`, amount: 1, price: totalAmount,
+                        amount_cur: totalAmount, currency: priceCur || asset,
+                        platform: 'Coinbase', product_type: 'Cash',
+                        trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                        notes: `Coinbase HTML: ${typeRaw} ${notes}`
+                    });
+                } else {
+                    out.push({
+                        date, id: asset, amount: qty, price: 0,
+                        amount_cur: totalAmount, currency: priceCur || 'USD',
+                        platform: 'Coinbase', product_type: 'Crypto',
+                        trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                        notes: `Coinbase HTML: ${typeRaw} ${notes}`
+                    });
+                }
+                continue;
+            }
+
             if (!priceCur || total == null || !qty) continue;
 
             const unit = Math.abs(total) / Math.abs(qty);
