@@ -237,9 +237,15 @@ export default class CoinbaseParser extends BaseParser {
 
             const isReward = /(reward|staking|learn|interest)/i.test(type);
             const isTrade = /(buy|sell)/i.test(type);
+            const isDeposit = /deposit/i.test(type);
+            const isWithdrawal = /withdrawal/i.test(type);
+
             if (!date || !asset) continue;
-            if (!isReward && !isTrade) continue;
-            if (/^(CZK|KČ|EUR|USD|GBP|CHF|PLN|HUF|JPY|CNY|AUD|CAD|NOK|SEK)$/i.test(asset)) continue;
+            if (!isReward && !isTrade && !isDeposit && !isWithdrawal) continue;
+
+            // Skip non-supported fiat assets for Trade/Reward logic, but keep for Cash ops
+            const isFiat = /^(CZK|KČ|EUR|USD|GBP|CHF|PLN|HUF|JPY|CNY|AUD|CAD|NOK|SEK)$/i.test(asset);
+            if (isFiat && !isDeposit && !isWithdrawal) continue;
 
             if (isReward) {
                 if (!qty) continue;
@@ -250,11 +256,36 @@ export default class CoinbaseParser extends BaseParser {
                 });
                 continue;
             }
+
             if (!pcur && row[iTotal]) {
                 const ex = this.extractCurrencyAndNumber(row[iTotal]);
                 if (ex && ex.currency) pcur = normCur(ex.currency);
             }
             if (!pcur && notes) { const m = notes.match(/\b([A-ZČ]{2,3})\b/); if (m) pcur = normCur(m[1]); }
+
+            if (isDeposit || isWithdrawal) {
+                const totalAmount = Math.abs(total ?? 0);
+                if (isFiat) {
+                    // Cash transaction
+                    out.push({
+                        date, id: `CASH_${asset}`, amount: 1, price: totalAmount,
+                        amount_cur: totalAmount, currency: pcur || asset, // Use asset as currency for cash
+                        platform: 'Coinbase', product_type: 'Cash',
+                        trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                        notes: `Coinbase CSV: ${type} ${notes}`
+                    });
+                } else {
+                    // Crypto transfer
+                    out.push({
+                        date, id: asset, amount: qty, price: 0,
+                        amount_cur: totalAmount, currency: pcur || 'USD',
+                        platform: 'Coinbase', product_type: 'Crypto',
+                        trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                        notes: `Coinbase CSV: ${type} ${notes}`
+                    });
+                }
+                continue;
+            }
 
             if (!pcur || total == null || !qty) continue;
             const unit = Math.abs(total) / Math.abs(qty);
