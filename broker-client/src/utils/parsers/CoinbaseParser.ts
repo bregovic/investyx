@@ -31,7 +31,7 @@ export default class CoinbaseParser extends BaseParser {
 
         for (let i = 0; i < rawLines.length; i++) {
             const line = rawLines[i];
-            if (!/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+UTC/.test(line)) continue;
+            if (!/^\d{4}-\d{2}-\d{2}/.test(line)) continue;
 
             const parts = this.parsePdfLine(line);
             if (!parts) continue;
@@ -58,7 +58,7 @@ export default class CoinbaseParser extends BaseParser {
                         notes: `Coinbase PDF: Sell ${notes || ''}`
                     });
                 }
-            } else if ((type === 'buy' || qty > 0) && assetUp && !['EUR', 'USD', 'CZK', 'GBP'].includes(assetUp)) {
+            } else if ((type === 'buy' || qty > 0) && assetUp && !['EUR', 'USD', 'CZK', 'GBP', 'PLN', 'HUF'].includes(assetUp)) {
                 const totalAmount = Math.abs(tot);
                 const assetQuantity = Math.abs(qty);
                 if (totalAmount > 0 && assetQuantity > 0) {
@@ -69,19 +69,32 @@ export default class CoinbaseParser extends BaseParser {
                         notes: `Coinbase PDF: Buy ${notes || ''}`
                     });
                 }
-            } else if (['deposit', 'withdrawal'].includes(type) && ['EUR', 'USD', 'CZK', 'GBP'].includes(assetUp)) {
+            } else if (['deposit', 'withdrawal'].includes(type)) {
                 const isDeposit = type === 'deposit';
                 const totalAmount = Math.abs(tot);
-                if (totalAmount > 0) {
+                const isFiat = ['EUR', 'USD', 'CZK', 'GBP', 'PLN', 'HUF'].includes(assetUp);
+
+                if (isFiat) {
+                    if (totalAmount > 0) {
+                        out.push({
+                            date, id: `CASH_${assetUp}`, amount: 1, price: totalAmount,
+                            amount_cur: totalAmount, currency: pCur || assetUp,
+                            platform: 'Coinbase', product_type: 'Cash', trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                            notes: `Coinbase PDF: ${transactionType} ${notes || ''}`
+                        });
+                    }
+                } else {
+                    // Crypto transfer
                     out.push({
-                        date, id: `CASH_${assetUp}`, amount: 1, price: totalAmount,
-                        amount_cur: totalAmount, currency: pCur,
-                        platform: 'Coinbase', product_type: 'Cash', trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
+                        date, id: assetUp, amount: Math.abs(qty), price: 0,
+                        amount_cur: totalAmount, currency: pCur || 'USD',
+                        platform: 'Coinbase', product_type: 'Crypto',
+                        trans_type: isDeposit ? 'Deposit' : 'Withdrawal', fees: 0,
                         notes: `Coinbase PDF: ${transactionType} ${notes || ''}`
                     });
                 }
             } else if (line.includes('Exchange Deposit')) {
-                // Skip
+                // Skip (internal transfer)
             } else if (line.includes('Pro Withdrawal') && assetUp && qty > 0) {
                 const totalAmount = Math.abs(tot);
                 const assetQuantity = Math.abs(qty);
