@@ -103,14 +103,18 @@ const ImportPage = () => {
         if (name.includes('revolut')) return 'Revolut';
         if (name.includes('fio') || name.includes('fio_')) return 'Fio banka';
         if (name.includes('trading212') || name.includes('trading 212')) return 'Trading 212';
+        if (name.includes('coinbase')) return 'Coinbase';
+        if (name.includes('ibkr') || (name.includes('activity') && name.includes('statement'))) return 'IBKR';
         if (name.endsWith('.xlsx')) return 'eToro (Excel)';
 
         // 2. Check content (fallback for CSVs mostly)
         try {
-            const text = await file.slice(0, 1024).text();
+            const text = await file.slice(0, 4096).text();
             if (text.includes('Fio banka') || text.includes('Id transakce')) return 'Fio banka';
             if (text.includes('Trading 212') || text.includes('Action,Time,ISIN')) return 'Trading 212';
             if (text.includes('Revolut') || text.includes('Type,Product,Started Date')) return 'Revolut';
+            if (text.includes('Coinbase') || text.includes('Transaction History')) return 'Coinbase';
+            if (text.includes('Interactive Brokers')) return 'IBKR';
         } catch (e) {
             console.error("Content check failed", e);
         }
@@ -138,7 +142,8 @@ const ImportPage = () => {
             setLogs(p => [...p, `Analyzuji soubor: ${f.name}...`]);
             const detected = await detectBroker(f);
             setFiles(prev => [...prev, { file: f, broker: detected }]);
-            setLogs(p => [...p, `✅ Detekován (${f.name}): ${detected}`]);
+            const symbol = (detected === 'Neznámý broker') ? '❌' : '✅';
+            setLogs(p => [...p, `${symbol} Detekován (${f.name}): ${detected}`]);
         }
     };
 
