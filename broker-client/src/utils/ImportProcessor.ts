@@ -3,6 +3,9 @@ import axios from 'axios';
 import { type Transaction } from './parsers/BaseParser';
 import Trading212Parser from './parsers/Trading212Parser';
 import RevolutParser from './parsers/RevolutParser';
+import CoinbaseParser from './parsers/CoinbaseParser';
+import FioParser from './parsers/FioParser';
+import IbkrParser from './parsers/IbkrParser';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -140,7 +143,9 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
         (text.toLowerCase().includes('ticker') && text.toLowerCase().includes('type') && text.toLowerCase().includes('quantity')) ||
         (text.toLowerCase().includes('commodity') && text.toLowerCase().includes('type'))
     ) provider = 'revolut';
-    else if (text.includes('Fio banka') || text.includes('Id transakce')) provider = 'fio';
+    else if (text.includes('Fio banka') || text.includes('FIO BANKA') || text.includes('Id transakce')) provider = 'fio';
+    else if (text.includes('Coinbase') || (text.includes('Timestamp') && text.toLowerCase().includes('transaction type'))) provider = 'coinbase';
+    else if (text.includes('Interactive Brokers') || text.includes('Activity Statement')) provider = 'ibkr';
 
     if (provider === 'unknown') {
         throw new Error('Nepodařilo se rozpoznat formát souboru (neznámý broker).');
@@ -156,9 +161,19 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
     } else if (provider === 'revolut') {
         const parser = new RevolutParser();
         transactions = await parser.parse(text);
+    } else if (provider === 'coinbase') {
+        const parser = new CoinbaseParser();
+        transactions = await parser.parse(text);
+    } else if (provider === 'fio') {
+        const parser = new FioParser();
+        transactions = await parser.parse(text);
+    } else if (provider === 'ibkr') {
+        const parser = new IbkrParser();
+        transactions = await parser.parse(text);
     } else {
         throw new Error(`Parser pro ${provider} není v Reactu implementován. Použijte starý web.`);
     }
+
 
     log(`Parsed ${transactions.length} transactions.`);
 

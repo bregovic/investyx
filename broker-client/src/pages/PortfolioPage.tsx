@@ -16,7 +16,7 @@ import {
     Button
 } from "@fluentui/react-components";
 import type { SelectionItemId, OnSelectionChangeData } from "@fluentui/react-components";
-import { ArrowSync24Regular, Delete24Regular } from "@fluentui/react-icons";
+import { ArrowSync24Regular, Delete24Regular, MoneySettings24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { SmartDataGrid } from "../components/SmartDataGrid";
@@ -66,6 +66,7 @@ export const PortfolioPage = () => {
     const [filteredItems, setFilteredItems] = useState<TransactionItem[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [updatingPrices, setUpdatingPrices] = useState(false);
 
     // Selection
     const [selectedItems, setSelectedItems] = useState<Set<SelectionItemId>>(new Set());
@@ -125,6 +126,21 @@ export const PortfolioPage = () => {
             alert('Chyba při mazání: ' + e.message);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleUpdatePrices = async () => {
+        setUpdatingPrices(true);
+        try {
+            // Call backend script to update prices from Yahoo/API
+            await axios.post('/investyx/ajax-update-prices.php');
+            alert('Tržní data byla aktualizována.');
+            loadData();
+        } catch (e: any) {
+            console.error(e);
+            alert('Chyba při aktualizaci cen: ' + (e.response?.data?.error || e.message));
+        } finally {
+            setUpdatingPrices(false);
         }
     };
 
@@ -220,6 +236,15 @@ export const PortfolioPage = () => {
                 <Toolbar>
                     <ToolbarButton appearance="subtle" icon={<ArrowSync24Regular />} onClick={loadData}>
                         {t('refresh') || 'Obnovit'}
+                    </ToolbarButton>
+
+                    <ToolbarButton
+                        appearance="subtle"
+                        icon={<MoneySettings24Regular />}
+                        onClick={handleUpdatePrices}
+                        disabled={updatingPrices}
+                    >
+                        {updatingPrices ? 'Aktualizuji...' : 'Aktualizovat ceny'}
                     </ToolbarButton>
 
                     <ToolbarButton
