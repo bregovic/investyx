@@ -140,13 +140,13 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
 
     if (text.includes('Trading 212') || hasHeaders(['action', 'time', 'isin'])) provider = 't212';
     else if (
-        text.includes('Revolut') ||
         text.includes('Cash top-up') ||
         text.includes('Cash withdrawal') ||
         hasHeaders(['type', 'product', 'started date']) ||
         hasHeaders(['type', 'ticker', 'quantity']) ||
         hasHeaders(['type', 'symbol', 'amount']) ||
-        hasHeaders(['type', 'commodity'])
+        hasHeaders(['type', 'commodity']) ||
+        (text.includes('Revolut') && (text.includes('Statement') || text.includes('Výpis'))) // Safer check for PDF header
     ) provider = 'revolut';
     else if (text.includes('Fio banka') || text.includes('FIO BANKA') || hasHeaders(['id transakce'])) provider = 'fio';
     else if (
