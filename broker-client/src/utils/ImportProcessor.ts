@@ -132,7 +132,10 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
     }
 
     // Detect logic
+    // Detect logic
     let provider = 'unknown';
+    const name = file.name.toLowerCase();
+
     if (text.includes('Trading 212') || text.includes('Action,Time,ISIN')) provider = 't212';
     else if (
         text.includes('Revolut') ||
@@ -146,6 +149,19 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
     else if (text.includes('Fio banka') || text.includes('FIO BANKA') || text.includes('Id transakce')) provider = 'fio';
     else if (text.toLowerCase().includes('coinbase') || (text.toLowerCase().includes('transaction history report')) || (text.toLowerCase().includes('timestamp') && text.toLowerCase().includes('transaction type') && text.toLowerCase().includes('asset') && text.toLowerCase().includes('quantity'))) provider = 'coinbase';
     else if (text.includes('Interactive Brokers') || text.includes('Activity Statement')) provider = 'ibkr';
+
+    // Fallback: Detect by filename if content check failed
+    if (provider === 'unknown') {
+        if (name.includes('coinbase')) provider = 'coinbase';
+        else if (name.includes('revolut')) provider = 'revolut';
+        else if (name.includes('trading212') || name.includes('trading 212')) provider = 't212';
+        else if (name.includes('fio') || name.includes('fio_')) provider = 'fio';
+        else if (name.includes('ibkr') || (name.includes('activity') && name.includes('statement'))) provider = 'ibkr';
+
+        if (provider !== 'unknown') {
+            log(`Provider detected by filename: ${provider}`);
+        }
+    }
 
     if (provider === 'unknown') {
         throw new Error('Nepodařilo se rozpoznat formát souboru (neznámý broker).');
