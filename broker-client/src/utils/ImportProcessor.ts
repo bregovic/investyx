@@ -132,36 +132,28 @@ export const processImport = async (file: File, log: (msg: string) => void): Pro
     }
 
     // Detect logic
-    // Detect logic
     let provider = 'unknown';
-    const name = file.name.toLowerCase();
 
-    if (text.includes('Trading 212') || text.includes('Action,Time,ISIN')) provider = 't212';
+    // Helper: Check first 20 lines for CSV headers signature (robust content check)
+    const lines = text.split(/\r?\n/).slice(0, 20).map(l => l.toLowerCase());
+    const hasHeaders = (keywords: string[]) => lines.some(l => keywords.every(k => l.includes(k)));
+
+    if (text.includes('Trading 212') || hasHeaders(['action', 'time', 'isin'])) provider = 't212';
     else if (
         text.includes('Revolut') ||
         text.includes('Cash top-up') ||
         text.includes('Cash withdrawal') ||
-        // CSV headers detection for Revolut (Crypto/Commodity/Trading)
-        (text.toLowerCase().includes('symbol') && text.toLowerCase().includes('type') && (text.toLowerCase().includes('quantity') || text.toLowerCase().includes('amount'))) ||
-        (text.toLowerCase().includes('ticker') && text.toLowerCase().includes('type') && text.toLowerCase().includes('quantity')) ||
-        (text.toLowerCase().includes('commodity') && text.toLowerCase().includes('type'))
+        hasHeaders(['type', 'product', 'started date']) ||
+        hasHeaders(['type', 'ticker', 'quantity']) ||
+        hasHeaders(['type', 'symbol', 'amount']) ||
+        hasHeaders(['type', 'commodity'])
     ) provider = 'revolut';
-    else if (text.includes('Fio banka') || text.includes('FIO BANKA') || text.includes('Id transakce')) provider = 'fio';
-    else if (text.toLowerCase().includes('coinbase') || (text.toLowerCase().includes('transaction history report')) || (text.toLowerCase().includes('timestamp') && text.toLowerCase().includes('transaction type') && text.toLowerCase().includes('asset') && text.toLowerCase().includes('quantity'))) provider = 'coinbase';
+    else if (text.includes('Fio banka') || text.includes('FIO BANKA') || hasHeaders(['id transakce'])) provider = 'fio';
+    else if (
+        text.toLowerCase().includes('transaction history report') ||
+        hasHeaders(['timestamp', 'transaction type', 'asset'])
+    ) provider = 'coinbase';
     else if (text.includes('Interactive Brokers') || text.includes('Activity Statement')) provider = 'ibkr';
-
-    // Fallback: Detect by filename if content check failed
-    if (provider === 'unknown') {
-        if (name.includes('coinbase')) provider = 'coinbase';
-        else if (name.includes('revolut')) provider = 'revolut';
-        else if (name.includes('trading212') || name.includes('trading 212')) provider = 't212';
-        else if (name.includes('fio') || name.includes('fio_')) provider = 'fio';
-        else if (name.includes('ibkr') || (name.includes('activity') && name.includes('statement'))) provider = 'ibkr';
-
-        if (provider !== 'unknown') {
-            log(`Provider detected by filename: ${provider}`);
-        }
-    }
 
     if (provider === 'unknown') {
         throw new Error('Nepodařilo se rozpoznat formát souboru (neznámý broker).');
