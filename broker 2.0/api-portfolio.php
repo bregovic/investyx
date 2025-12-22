@@ -113,6 +113,18 @@ try {
              $g['net_qty'] += $amount;
              $g['total_cost_czk'] += abs($amountCzk);
              $g['total_cost_orig'] += ($amount * $price);
+        } elseif ($tt === 'deposit') {
+             $g['net_qty'] += $amount;
+             $g['total_cost_czk'] += abs($amountCzk);
+             $g['total_cost_orig'] += ($amount * $price);
+        } elseif ($tt === 'withdrawal') {
+            if ($g['net_qty'] > 0) {
+                 $ratio = $amount / $g['net_qty'];
+                 if ($ratio > 1) $ratio = 1;
+                 $g['total_cost_czk'] -= ($g['total_cost_czk'] * $ratio);
+                 $g['total_cost_orig'] -= ($g['total_cost_orig'] * $ratio);
+            }
+            $g['net_qty'] -= $amount;
         }
         unset($g);
     }
@@ -129,13 +141,14 @@ try {
         
         $currentPrice = 0;
         $currencyMismatch = false;
-        if (isset($quotes[$key])) {
-            $currentPrice = $quotes[$key]['price'];
+        if (isset($quotes[$g['ticker']])) {
+            $quote = $quotes[$g['ticker']];
+            $currentPrice = $quote['price'];
             // DON'T override currency from transactions - keep transaction currency as source of truth
             // But log if there's a mismatch for debugging
-            if ($quotes[$key]['currency'] && $quotes[$key]['currency'] !== $g['currency']) {
+            if ($quote['currency'] && $quote['currency'] !== $g['currency']) {
                 $currencyMismatch = true;
-                error_log("Currency mismatch for $key: transactions say {$g['currency']}, live_quotes says {$quotes[$key]['currency']}");
+                // error_log("Currency mismatch for $key: transactions say {$g['currency']}, live_quotes says {$quote['currency']}");
             }
         }
         $g['current_price'] = $currentPrice;
