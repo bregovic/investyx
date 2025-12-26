@@ -28,6 +28,19 @@ class GoogleFinanceService
         $this->ttlSeconds = $ttlSeconds;
     }
 
+    private function fetchUrl($url) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        $data = curl_exec($ch);
+        curl_close($ch);
+        return $data;
+    }
+
     /**
      * Vrátí data pro ticker.
      * @param string $ticker
@@ -497,8 +510,7 @@ class GoogleFinanceService
                 $yahooTicker = $ticker . '-USD';
                 $urlY = "https://query1.finance.yahoo.com/v8/finance/chart/{$yahooTicker}?interval=1d&range=1d";
                 
-                $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 5]]);
-                $jsonY = @file_get_contents($urlY, false, $ctx);
+                $jsonY = $this->fetchUrl($urlY);
                 
                 if ($jsonY) {
                     $dataY = json_decode($jsonY, true);
@@ -529,15 +541,7 @@ class GoogleFinanceService
             $coinGeckoId = $cryptoTickers[$ticker] ?? strtolower($ticker); // Fallback to ticker name if not in map
             $url = 'https://api.coingecko.com/api/v3/simple/price?ids=' . urlencode($coinGeckoId) . '&vs_currencies=usd&include_24hr_change=true';
             
-            $context = stream_context_create([
-                'http' => [
-                    'method'  => 'GET',
-                    'timeout' => 5,
-                    'header'  => "User-Agent: Mozilla/5.0 (PortfolioTracker)\r\nAccept: application/json\r\n",
-                ]
-            ]);
-
-            $response = @file_get_contents($url, false, $context);
+            $response = $this->fetchUrl($url);
             if ($response !== false && $response !== '') {
                 $apiData = json_decode($response, true);
                 if (isset($apiData[$coinGeckoId]['usd'])) {
@@ -621,17 +625,7 @@ class GoogleFinanceService
         foreach ($candidates as $code) {
             $url = 'https://www.google.com/finance/quote/' . urlencode($code) . '?hl=en';
 
-            $context = stream_context_create([
-                'http' => [
-                    'method'  => 'GET',
-                    'timeout' => 4,
-                    'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\n" .
-                                "Accept: text/html,application/xhtml+xml\r\n" .
-                                "Accept-Language: en-US,en;q=0.9\r\n",
-                ],
-            ]);
-
-            $html = @file_get_contents($url, false, $context);
+            $html = $this->fetchUrl($url);
             if ($html === false || $html === '') {
                 continue;
             }
@@ -733,8 +727,7 @@ class GoogleFinanceService
         foreach ($candidates as $yTicker) {
             try {
                 $url = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($yTicker) . "?interval=1d&range=1d";
-                $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 4]]);
-                $json = @file_get_contents($url, false, $ctx);
+                $json = $this->fetchUrl($url);
                 
                 if ($json) {
                     $data = json_decode($json, true);

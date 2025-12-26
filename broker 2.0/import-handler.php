@@ -12,6 +12,7 @@
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 session_start();
+require_once __DIR__ . '/googlefinanceservice.php';
 
 /* ===================== User ===================== */
 function resolveUserIdFromSession() {
@@ -400,6 +401,7 @@ try {
 /* ===================== Main loop ===================== */
 $inserted=0; $skipped=0; $failed=0; $errors=[];
 $skipped_dup=0; $skipped_invalidId=0;
+$uniqueTickers = [];
 
 foreach ($rows as $i => $r) {
     try {
@@ -430,7 +432,10 @@ foreach ($rows as $i => $r) {
             $skipped++; $skipped_invalidId++;
             $errors[]="řádek $i: nepřijaté ID '$id' (skip)";
             continue;
+            continue;
         }
+
+        $uniqueTickers[] = $id;
 
         // Resolve FX/ex_rate
         if ($currency === 'CZK') { $ex_rate = 1.0; }
@@ -518,6 +523,33 @@ foreach ($rows as $i => $r) {
     } catch (Exception $e) {
         $failed++; $errors[] = "řádek $i: ".$e->getMessage();
     }
+}
+
+// Update prices for new/processed tickers if missing/old
+if (!empty($uniqueTickers)) {
+    try {
+        set_time_limit(300);
+        $gService = new GoogleFinanceService($pdo, 3600); // 1h cache
+        $todo = array_unique($uniqueTickers);
+        $updatedPrices = 0;
+        foreach ($todo as $t) {
+             if (empty($t) || preg_match('/^(CASH_|FEE_|FX_|CORP_)/', $t)) continue;
+             
+             // Check if we need update (today's price missing)
+             $stmt = $pdo->prepare("SELECT last_fetched FROM live_quotes WHERE id = ?");
+             $stmt->execute([$t]);
+             $last = $stmt->fetchColumn();
+             
+             // If never fetched or not today
+             if (!$last || substr($last, 0, 10) !== date('Y-m-d')) {
+                 $gService->getQuote($t, true); // Force fresh
+                 $updatedPrices++;
+             }
+        }
+        if ($updatedPrices > 0) {
+             $errors[] = "Info: Aktualizovány ceny pro $updatedPrices tickerů.";
+        }
+    } catch(Exception $e) { error_log("Price update error: ".$e->getMessage()); }
 }
 
 
