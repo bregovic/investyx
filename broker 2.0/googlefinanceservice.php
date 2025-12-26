@@ -301,6 +301,7 @@ class GoogleFinanceService
             $finalCurrency,
             $data['exchange'] ?? null,
             $data['company_name'] ?? null,
+            $data['source'] ?? 'google_scrape',
             $id
         ];
         
@@ -313,7 +314,8 @@ class GoogleFinanceService
                     change_percent = ?,
                     currency = ?,
                     exchange = ?,
-                    company_name = ?
+                    company_name = ?,
+                    source = ?
                     WHERE id = ?";
         } else {
             // INSERT
@@ -321,14 +323,16 @@ class GoogleFinanceService
             array_unshift($params, $id); // params: [id, price, change_am, ...]
             array_pop($params); // id už tam bylo na konci pro update, vyhodíme ho
             // Oprava parametrů pro INSERT: [id, source, last_fetched, curr, prev, ...]
-            // Uděláme to čistěji:
+            
+            $source = $data['source'] ?? 'google_scrape';
             
             $sql = "INSERT INTO live_quotes 
                     (id, source, last_fetched, current_price, change_amount, change_percent, currency, exchange, company_name, status)
-                    VALUES (?, 'google_scrape', NOW(), ?, ?, ?, ?, ?, ?, 'active')";
+                    VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, 'active')";
                     
             $params = [
                 $id,
+                $source,
                 $currentPrice,
                 $changeAmount,
                 $changePercent,
@@ -532,6 +536,7 @@ class GoogleFinanceService
                             'company_name'   => $ticker . ' (Crypto)',
                             'exchange'       => 'CRYPTO',
                             'currency'       => 'USD',
+                            'source'         => 'yahoo',
                         ];
                     }
                 }
@@ -552,6 +557,7 @@ class GoogleFinanceService
                         'company_name'   => $ticker,
                         'exchange'       => 'CRYPTO',
                         'currency'       => 'USD',
+                        'source'         => 'coingecko',
                     ];
                 }
             }
@@ -620,6 +626,7 @@ class GoogleFinanceService
             'company_name'   => null,
             'exchange'       => null,
             'currency'       => 'USD',
+            'source'         => 'google_finance',
         ];
 
         foreach ($candidates as $code) {
@@ -754,6 +761,7 @@ class GoogleFinanceService
                                 'company_name'   => $companyName,
                                 'exchange'       => $result['meta']['fullExchangeName'] ?? $result['meta']['exchangeName'] ?? 'Yahoo',
                                 'currency'       => $result['meta']['currency'] ?? 'USD',
+                                'source'         => 'yahoo',
                             ];
                         }
                     }
