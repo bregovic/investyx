@@ -64,6 +64,19 @@ try {
         return $ema;
     }
 
+    function fetchUrl($url) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        $data = curl_exec($ch);
+        curl_close($ch);
+        return $data;
+    }
+
     // Main Processor
     function processTicker($pdo, $googleService, $ticker, $period) {
         $errorLog = [];
@@ -111,11 +124,10 @@ try {
         $usedSource = 'yahoo';
         
         // Fetch JSON
-        $url = "https://query2.finance.yahoo.com/v8/finance/chart/" . urlencode($yahooTicker) . 
+        $url = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($yahooTicker) . 
                "?period1=$start&period2=$end&interval=1d&events=history&includeAdjustedClose=true";
         
-        $ctx = stream_context_create(['http' => ['method'=>'GET', 'timeout'=>8]]);
-        $json = @file_get_contents($url, false, $ctx);
+        $json = fetchUrl($url);
         
         $yahooData = null;
         if ($json) {
@@ -134,9 +146,9 @@ try {
              $suffix = substr(strrchr($yahooTicker, '.'), 1);
              if (strlen($suffix) === 1) { 
                  $alt = str_replace('.', '-', $yahooTicker);
-                 $urlAlt = "https://query2.finance.yahoo.com/v8/finance/chart/" . urlencode($alt) . 
+                 $urlAlt = "https://query1.finance.yahoo.com/v8/finance/chart/" . urlencode($alt) . 
                            "?period1=$start&period2=$end&interval=1d&events=history&includeAdjustedClose=true";
-                 $jsonAlt = @file_get_contents($urlAlt, false, $ctx);
+                 $jsonAlt = fetchUrl($urlAlt);
                  if ($jsonAlt) {
                      $dAlt = json_decode($jsonAlt, true);
                      if (!empty($dAlt['chart']['result'][0]['timestamp'])) {
@@ -201,7 +213,7 @@ try {
             
             // 2. Fetch Fundamentals (v7 quote) to update live_quotes table
             $qUrl = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" . urlencode($yahooTicker);
-            $qJson = @file_get_contents($qUrl, false, $ctx);
+            $qJson = fetchUrl($qUrl);
             if ($qJson) {
                 $qData = json_decode($qJson, true);
                 $qRes = $qData['quoteResponse']['result'][0] ?? [];
