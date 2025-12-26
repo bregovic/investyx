@@ -286,29 +286,39 @@ try {
             $ema = calcEMA($allPrices, 212);
             
             // Resilience (Count of recoveries from >30% drops)
+            // Logic: Cycle based. 
+            // 1. Establish Peak.
+            // 2. If drops > 30% from Peak -> Crash.
+            // 3. If recovers to > 85% of Peak -> Recovery (+1), and Peak resets (to capture next local cycle).
+            
             $resilience = 0;
             $peak = 0;
             $inCrash = false;
+            
             foreach ($allPrices as $p) {
                 if ($p <= 0) continue;
                 
-                // Update Peak logic
                 if ($p > $peak) {
-                    if ($inCrash) { // Recovered to new ATH
-                         $resilience++;
-                         $inCrash = false;
+                    // New High
+                    if ($inCrash) {
+                        // Recovered to new High (Automatic recovery)
+                        $resilience++;
+                        $inCrash = false;
                     }
                     $peak = $p;
-                } elseif ($p >= $peak * 0.95) { // Recovered to near ATH (95%)
-                    if ($inCrash) {
-                         $resilience++;
-                         $inCrash = false;
-                    }
                 } else {
+                    // Check Recovery condition
+                    if ($inCrash && $p >= $peak * 0.85) {
+                        $resilience++;
+                        $inCrash = false;
+                        // Reset Peak to current level to start tracking local cycle (e.g. for IBM 2020 dip inside long stagnation)
+                        $peak = $p;
+                    }
+                    
                     // Check Drop
                     $dd = ($peak - $p) / ($peak ?: 1);
                     if ($dd > 0.30 && !$inCrash) {
-                        $inCrash = true; 
+                        $inCrash = true;
                     }
                 }
             }
