@@ -64,6 +64,16 @@ try {
         return $ema;
     }
 
+    function resampleToWeekly($rows) {
+        $weekly = [];
+        foreach ($rows as $row) {
+            $ts = strtotime($row['date']);
+            $key = date('o-W', $ts); // ISO Year-Week
+            $weekly[$key] = $row['price']; // Overwrite to keep last price of week
+        }
+        return array_values($weekly);
+    }
+
     function fetchUrl($url) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -276,14 +286,21 @@ try {
 
         // --- STATS CALC (EMA, ATH) ---
         // Fetch full history now (sorted)
-        $stmtAll = $pdo->prepare("SELECT price FROM tickers_history WHERE ticker=? ORDER BY date ASC");
+        // Fetch full history now (sorted)
+        $stmtAll = $pdo->prepare("SELECT date, price FROM tickers_history WHERE ticker=? ORDER BY date ASC");
         $stmtAll->execute([$originalTicker]); // Use original
-        $allPrices = $stmtAll->fetchAll(PDO::FETCH_COLUMN);
+        $rows = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
         
-        if ($allPrices) {
+        // Extract plain prices for high/low/resilience (Daily)
+        $allPrices = array_column($rows, 'price');
+        
+        if ($rows) {
             $ath = max($allPrices);
             $atl = min($allPrices);
-            $ema = calcEMA($allPrices, 212);
+            
+            // EMA 212 on Weekly Data
+            $weeklyPrices = resampleToWeekly($rows);
+            $ema = calcEMA($weeklyPrices, 212);
             
             // Resilience (Count of recoveries from >30% drops)
             // Logic: Cycle based. 
