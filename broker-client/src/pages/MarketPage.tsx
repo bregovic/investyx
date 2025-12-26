@@ -65,6 +65,7 @@ interface MarketItem {
     high_52w?: number;
     low_52w?: number;
     ema_212?: number;
+    resilience_score?: number;
     last_fetched?: string;
     is_watched?: number;
 }
@@ -272,6 +273,14 @@ const MarketPage = () => {
         createTableColumn<MarketItem>({ columnId: 'change_pct', compare: (a, b) => a.change_percent - b.change_percent, renderHeaderCell: () => t('col_change_pct'), renderCell: (item) => { const val = Number(item.change_percent); return <span className={val >= 0 ? styles.pos : styles.neg} style={{ fontWeight: 600 }}>{val > 0 ? '+' : ''}{val.toFixed(2)}%</span>; } }),
         createTableColumn<MarketItem>({ columnId: 'range', compare: (a, b) => { const rA = a.high_52w ? (a.current_price / a.high_52w) : 0; const rB = b.high_52w ? (b.current_price / b.high_52w) : 0; return rA - rB; }, renderHeaderCell: () => t('col_range'), renderCell: (item) => { if (!item.high_52w || !item.low_52w || item.high_52w === 0) return <span className={styles.smallText}>-</span>; const max = Number(item.high_52w); const min = Number(item.low_52w); const cur = Number(item.current_price); const fromMax = ((cur - max) / max) * 100; const fromMin = min > 0 ? ((cur - min) / min) * 100 : 0; return (<div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px' }}><span className={styles.neg}>{fromMax.toFixed(1)}% ({t('from_max')})</span><span className={styles.pos}>+{fromMin.toFixed(1)}% ({t('from_min')})</span></div>); } }),
         createTableColumn<MarketItem>({ columnId: 'trend', compare: (a, b) => { const dA = a.ema_212 ? ((a.current_price - a.ema_212) / a.ema_212) : -999; const dB = b.ema_212 ? ((b.current_price - b.ema_212) / b.ema_212) : -999; return dA - dB; }, renderHeaderCell: () => t('col_trend'), renderCell: (item) => { if (!item.ema_212) return <span className={styles.smallText}>-</span>; const ema = Number(item.ema_212); const cur = Number(item.current_price); const diff = ((cur - ema) / ema) * 100; return (<div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px' }}><span style={{ fontWeight: 600, color: diff > 0 ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1 }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}%</span><span style={{ color: tokens.colorNeutralForeground3 }}>{t('trend_ema')}: {ema.toFixed(0)}</span></div>); } }),
+        createTableColumn<MarketItem>({
+            columnId: 'resilience',
+            compare: (a, b) => (a.resilience_score || 0) - (b.resilience_score || 0),
+            renderHeaderCell: () => 'Odolnost',
+            renderCell: (item) => item.resilience_score === 1
+                ? <Badge appearance="filled" color="success" shape="rounded">Vysoká</Badge>
+                : <span className={styles.smallText} style={{ color: '#ccc' }}>-</span>
+        }),
         createTableColumn<MarketItem>({ columnId: 'actions', renderHeaderCell: () => t('col_actions'), renderCell: (item) => <Button icon={<Line24Regular />} size="small" appearance="subtle" onClick={() => setChartTicker(item.ticker)}>Graf</Button> })
     ];
 
