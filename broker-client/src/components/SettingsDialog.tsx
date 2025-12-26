@@ -12,9 +12,11 @@ import {
     Label,
     makeStyles,
     Text,
-    tokens
+    tokens,
+    Divider
 } from '@fluentui/react-components';
 import { useTranslation } from '../context/TranslationContext';
+import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
 const useStyles = makeStyles({
@@ -30,7 +32,11 @@ const useStyles = makeStyles({
 export const SettingsDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
     const styles = useStyles();
     const { language, setLanguage, t } = useTranslation();
+    const { user } = useAuth();
     const [saving, setSaving] = useState(false);
+
+    const isDev = import.meta.env.DEV;
+    const getApiUrl = (endpoint: string) => isDev ? `http://localhost/Webhry/hollyhop/broker/broker 2.0/${endpoint}` : `/investyx/${endpoint}`;
 
     const handleSave = async () => {
         setSaving(true);
@@ -65,6 +71,17 @@ export const SettingsDialog = ({ open, onOpenChange }: { open: boolean, onOpenCh
                                 <Option value="en" text="English">English</Option>
                             </Dropdown>
                         </div>
+
+                        {user?.role === 'admin' && (
+                            <>
+                                <Divider style={{ margin: '10px 0' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    <Label>Admin Nástroje</Label>
+                                    <Button onClick={() => window.open(getApiUrl('debug-prices.php?ticker=ZM'), '_blank')}>Debug Prices (API)</Button>
+                                    <Text size={200} style={{ color: tokens.colorNeutralForeground4 }}>Otevře diagnostiku API v novém okně.</Text>
+                                </div>
+                            </>
+                        )}
                     </DialogContent>
                     <DialogActions>
                         <Button appearance="secondary" onClick={() => onOpenChange(false)}>
