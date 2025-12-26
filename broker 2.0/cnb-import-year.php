@@ -130,6 +130,15 @@ for ($i = 1; $i < $colsCount; $i++) {
     }
 }
 
+// FIX: Detect RUB index to handle missing column in 2022 (Sanctions caused RUB removal from data but kept in header)
+$rubIndex = null;
+foreach($colMap as $ii => $cc) {
+    if ($cc['currency'] === 'RUB') {
+        $rubIndex = $ii;
+        break;
+    }
+}
+
 // bezpečnostní kontrola
 if (empty($colMap)) {
     echo json_encode([
@@ -169,6 +178,13 @@ try {
         if ($line === '') continue;
 
         $parts = explode('|', $line);
+        
+        // FIX: Hande missing RUB column (common in 2022) causing left-shift of subsequent currencies (USD getting XDR values)
+        if ($rubIndex !== null && count($parts) === $colsCount - 1) {
+             // Insert empty placeholder at RUB position to realign columns
+             array_splice($parts, $rubIndex, 0, ""); 
+        }
+
         if (count($parts) < 2) continue;
 
         $dateStr = trim($parts[0]);
