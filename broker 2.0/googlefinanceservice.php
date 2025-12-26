@@ -565,7 +565,13 @@ class GoogleFinanceService
             return null;
         }
 
-        // For stocks, use Google Finance
+        // For stocks, try Yahoo Finance FIRST (API is more reliable than scraping)
+        $yahooData = $this->fetchFromYahoo($ticker);
+        if ($yahooData !== null) {
+            return $yahooData;
+        }
+
+        // Fallback: Google Finance Scraper
         // Select exchanges based on target currency (like old bal.php system)
         $exchanges = [];
         switch ($targetCurrency) {
