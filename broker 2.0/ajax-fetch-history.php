@@ -37,6 +37,18 @@ try {
         $cryptos = ['BTC'=>'BTC-USD', 'ETH'=>'ETH-USD', 'SOL'=>'SOL-USD', 'XRP'=>'XRP-USD', 'ADA'=>'ADA-USD', 'LTC'=>'LTC-USD'];
         if (isset($cryptos[$t])) return $cryptos[$t];
         if ($t === 'BRK.B') return 'BRK-B';
+        // Stocks Map
+        $stockMap = [
+            'CBK' => 'CBK.DE', 
+            'VOW3' => 'VOW3.DE',
+            'BAS' => 'BAS.DE',
+            'SIE' => 'SIE.DE',
+            'ALV' => 'ALV.DE',
+            'LLOY' => 'LLOY.L',
+            'RR' => 'RR.L'
+        ];
+        if (isset($stockMap[$t])) return $stockMap[$t];
+        
         // ETFs
         $etfMap = [
             'ZPRV'=>'ZPRV.DE', 'CNDX'=>'CNDX.L', 'CSPX'=>'CSPX.L', 'IWVL'=>'IWVL.L', 
