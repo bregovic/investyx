@@ -277,9 +277,12 @@ const MarketPage = () => {
             columnId: 'resilience',
             compare: (a, b) => (a.resilience_score || 0) - (b.resilience_score || 0),
             renderHeaderCell: () => 'Odolnost',
-            renderCell: (item) => item.resilience_score === 1
-                ? <Badge appearance="filled" color="success" shape="rounded">Vysoká</Badge>
-                : <span className={styles.smallText} style={{ color: '#ccc' }}>-</span>
+            renderCell: (item) => {
+                const val = item.resilience_score || 0;
+                return val > 0
+                    ? <Badge appearance="filled" color="success" shape="rounded" size="small">{val}x</Badge>
+                    : <span className={styles.smallText} style={{ color: tokens.colorNeutralForeground4 }}>-</span>;
+            }
         }),
         createTableColumn<MarketItem>({ columnId: 'actions', renderHeaderCell: () => t('col_actions'), renderCell: (item) => <Button icon={<Line24Regular />} size="small" appearance="subtle" onClick={() => setChartTicker(item.ticker)}>Graf</Button> })
     ];

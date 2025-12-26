@@ -285,12 +285,32 @@ try {
             $atl = min($allPrices);
             $ema = calcEMA($allPrices, 212);
             
-            // Resilience
+            // Resilience (Count of recoveries from >30% drops)
             $resilience = 0;
-            $drop = ($ath - $atl) / ($ath ?: 1);
-            if ($drop > 0.6) {
-                $cur = end($allPrices);
-                if (($cur / ($ath ?: 1)) > 0.7) $resilience = 1;
+            $peak = 0;
+            $inCrash = false;
+            foreach ($allPrices as $p) {
+                if ($p <= 0) continue;
+                
+                // Update Peak logic
+                if ($p > $peak) {
+                    if ($inCrash) { // Recovered to new ATH
+                         $resilience++;
+                         $inCrash = false;
+                    }
+                    $peak = $p;
+                } elseif ($p >= $peak * 0.95) { // Recovered to near ATH (95%)
+                    if ($inCrash) {
+                         $resilience++;
+                         $inCrash = false;
+                    }
+                } else {
+                    // Check Drop
+                    $dd = ($peak - $p) / ($peak ?: 1);
+                    if ($dd > 0.30 && !$inCrash) {
+                        $inCrash = true; 
+                    }
+                }
             }
 
             $sqlUpd = "UPDATE live_quotes SET all_time_high=?, all_time_low=?, ema_212=?, resilience_score=? WHERE id=?";
