@@ -84,7 +84,7 @@ const ChartModal = ({ open, ticker, currency, companyName, onClose }: { open: bo
     const handleRefreshData = async () => {
         setLoading(true);
         try {
-            await axios.post(getApiUrl('ajax-fetch-history.php'), { ticker, action: 'fetch' });
+            await axios.post(getApiUrl('ajax-fetch-history.php'), { ticker, action: 'fetch', period: 'max' });
             const res = await axios.get(getApiUrl(`ajax-get-chart-data.php?ticker=${ticker}`));
             if (res.data && res.data.success) {
                 const chartData = res.data.labels.map((date: string, i: number) => ({ date, price: res.data.data[i] }));

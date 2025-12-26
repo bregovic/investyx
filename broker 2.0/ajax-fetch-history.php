@@ -84,7 +84,7 @@ try {
         $start = strtotime('-2 years'); // Default for EMA
         
         if ($period === 'max') {
-            $start = strtotime('-20 years');
+            $start = strtotime('1980-01-01');
             if (strpos($yahooTicker, 'BTC') !== false) $start = strtotime('2014-09-15');
         } elseif ($period === '1y') {
             $start = strtotime('-1 year');
