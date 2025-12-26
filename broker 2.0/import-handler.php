@@ -535,13 +535,16 @@ if (!empty($uniqueTickers)) {
         foreach ($todo as $t) {
              if (empty($t) || preg_match('/^(CASH_|FEE_|FX_|CORP_)/', $t)) continue;
              
-             // Check if we need update (today's price missing)
-             $stmt = $pdo->prepare("SELECT last_fetched FROM live_quotes WHERE id = ?");
+             // Check if we need update (today's price missing OR price is 0)
+             $stmt = $pdo->prepare("SELECT last_fetched, current_price FROM live_quotes WHERE id = ?");
              $stmt->execute([$t]);
-             $last = $stmt->fetchColumn();
+             $row = $stmt->fetch(PDO::FETCH_ASSOC);
              
-             // If never fetched or not today
-             if (!$last || substr($last, 0, 10) !== date('Y-m-d')) {
+             $last = $row['last_fetched'] ?? null;
+             $price = $row['current_price'] ?? null;
+             
+             // Update if never fetched, OR not today, OR price is null/zero
+             if (!$last || substr($last, 0, 10) !== date('Y-m-d') || $price === null || $price == 0) {
                  $gService->getQuote($t, true); // Force fresh
                  $updatedPrices++;
              }
