@@ -1,90 +1,50 @@
 <?php
 // ajax-fetch-history.php
-// Robustní verze 3.0 (Restored & Enhanced)
-// Stahuje Historii (v8/chart) + Fundamenty (v7/quote)
-// Počítá EMA a aktualizuje statistiky
+// v2.1 - Unified Price Updater (Yahoo Primary + Google Fallback)
+// Respektuje: period (1d, 1y, max) nebo auto-smart.
 
-ini_set('display_errors', 0); // Vypneme output do browseru (JSON only)
-// ini_set('log_errors', 1); ini_set('error_log', 'fetch_debug.log'); // Debug
-
+ini_set('display_errors', 0);
 header('Content-Type: application/json; charset=utf-8');
 
+// Load Google Service
+require_once __DIR__ . '/googlefinanceservice.php';
+
 try {
-    // 1. Konfigurace a DB
+    // 1. Config & DB
     $envPaths = [
-        __DIR__ . '/env.local.php',
-        __DIR__ . '/../env.local.php',
-        $_SERVER['DOCUMENT_ROOT'] . '/env.local.php',
-        __DIR__ . '/../../env.local.php',
-        __DIR__ . '/php/env.local.php',
-        __DIR__ . '/env.php',
-        __DIR__ . '/../env.php',
-        __DIR__ . '/../../env.php',
-        $_SERVER['DOCUMENT_ROOT'] . '/env.php'
+        __DIR__ . '/env.local.php', __DIR__ . '/../env.local.php', 
+        $_SERVER['DOCUMENT_ROOT'] . '/env.local.php', __DIR__ . '/env.php'
     ];
-    foreach ($envPaths as $path) {
-        if (file_exists($path)) {
-            require_once $path;
-            break;
-        }
-    }
+    foreach ($envPaths as $p) { if(file_exists($p)) { require_once $p; break; } }
     
     if (!defined('DB_HOST')) {
         if (file_exists(__DIR__ . '/db.php')) require_once __DIR__ . '/db.php';
-        else if (file_exists(__DIR__ . '/php/db.php')) require_once __DIR__ . '/php/db.php';
+        elseif (file_exists(__DIR__ . '/php/db.php')) require_once __DIR__ . '/php/db.php';
     }
-
-    if (!defined('DB_HOST')) throw new Exception("DB Config not found");
-
+    
+    // DB Init
     $pdo = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8", DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
 
-    // 2. Vstupy
-    $inputRaw = file_get_contents('php://input');
-    $input = json_decode($inputRaw, true);
-    $action = $_GET['action'] ?? $_POST['action'] ?? ($input['action'] ?? '');
-    $ticker = $_GET['ticker'] ?? $_POST['ticker'] ?? ($input['ticker'] ?? '');
-    $period = $_GET['period'] ?? $_POST['period'] ?? ($input['period'] ?? '1y');
+    // Init Services
+    $googleService = new GoogleFinanceService($pdo);
 
-    if ($action === 'list') {
-        $stmt = $pdo->query("SELECT id FROM live_quotes WHERE status='active' ORDER BY id");
-        echo json_encode(['success' => true, 'tickers' => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
-        exit;
-    }
-
-    if (empty($ticker)) throw new Exception("No Ticker specified");
-    if ($ticker === 'ALL' && empty($action)) $ticker = 'ALL'; // Handle logic below
-
-    // --- HELPERY ---
+    // Helpers
     function mapTickerToYahoo($t) {
         $t = strtoupper(trim($t));
-        if (strpos($t, ':') !== false) { $parts = explode(':', $t); $t = $parts[1] ?? $parts[0]; }
-        
-        // Yahoo special cases
+        // Common Cryptos for Yahoo
+        $cryptos = ['BTC'=>'BTC-USD', 'ETH'=>'ETH-USD', 'SOL'=>'SOL-USD', 'XRP'=>'XRP-USD', 'ADA'=>'ADA-USD', 'LTC'=>'LTC-USD'];
+        if (isset($cryptos[$t])) return $cryptos[$t];
         if ($t === 'BRK.B') return 'BRK-B';
-        if ($t === 'BTC') return 'BTC-USD'; 
-        if ($t === 'ETH') return 'ETH-USD';
-
-        // ETF Mapping for Yahoo Finance
-        // Mapping based on common European listings (Xetra/London)
+        // ETFs
         $etfMap = [
-            'ZPRV' => 'ZPRV.DE', // SPDR MSCI USA Small Cap Value Weighted UCITS ETF
-            'CNDX' => 'CNDX.L',  // iShares NASDAQ 100 UCITS ETF (Acc)
-            'CSPX' => 'CSPX.L',  // iShares Core S&P 500 UCITS ETF
-            'IWVL' => 'IWVL.L',  // iShares Edge MSCI World Value Factor
-            'VWRA' => 'VWRA.L',  // Vanguard FTSE All-World UCITS ETF
-            'EQQQ' => 'EQQQ.DE', // Invesco EQQQ NASDAQ-100 UCITS ETF
-            'EUNL' => 'EUNL.DE', // iShares Core MSCI World UCITS ETF
-            'IS3N' => 'IS3N.DE', // iShares Core MSCI EM IMI UCITS ETF
-            'SXR8' => 'SXR8.DE', // iShares Core S&P 500 UCITS ETF (Acc)
-            'RBOT' => 'RBOT.L',  // iShares Automation & Robotics
-            'RENW' => 'RENW.L'   // iShares Global Clean Energy
+            'ZPRV'=>'ZPRV.DE', 'CNDX'=>'CNDX.L', 'CSPX'=>'CSPX.L', 'IWVL'=>'IWVL.L', 
+            'VWRA'=>'VWRA.L', 'EQQQ'=>'EQQQ.DE', 'EUNL'=>'EUNL.DE', 'IS3N'=>'IS3N.DE', 
+            'SXR8'=>'SXR8.DE', 'RBOT'=>'RBOT.L', 'RENW'=>'RENW.L'
         ];
-
         if (isset($etfMap[$t])) return $etfMap[$t];
-        
-        // Prague Stock Exchange
+        // CZ Stocks
         $czStocks = ['CEZ', 'KB', 'MONET', 'ERBAG', 'KOMB', 'PHILIP', 'COLT', 'KOFOL'];
         if (in_array($t, $czStocks)) return $t . '.PR';
         
@@ -94,7 +54,7 @@ try {
     function calcEMA($values, $period) {
         $count = count($values);
         if ($count < $period) return null;
-        $sum = 0;
+        $sum = 0; 
         for ($i = 0; $i < $period; $i++) $sum += $values[$i];
         $ema = $sum / $period;
         $k = 2 / ($period + 1);
@@ -104,264 +64,246 @@ try {
         return $ema;
     }
 
-    function processTicker($pdo, $ticker, $period) {
+    // Main Processor
+    function processTicker($pdo, $googleService, $ticker, $period) {
+        $errorLog = [];
         $originalTicker = $ticker;
-        
-        // Check if this ticker is an alias for another ticker
+
+        // Resolve Alias
         try {
-            $stmt = $pdo->prepare("SELECT alias_of FROM ticker_mapping WHERE ticker = ? AND alias_of IS NOT NULL AND alias_of != '' LIMIT 1");
+            $stmt = $pdo->prepare("SELECT alias_of FROM ticker_mapping WHERE ticker = ? AND alias_of != '' LIMIT 1");
             $stmt->execute([$ticker]);
-            $aliasOf = $stmt->fetchColumn();
-            
-            if ($aliasOf) {
-                // Use the canonical ticker for fetching
-                $ticker = $aliasOf;
-            }
-        } catch (Exception $e) {
-            // Column might not exist, ignore
-        }
-        
+            $alias = $stmt->fetchColumn();
+            if ($alias) $ticker = $alias;
+        } catch(Exception $e) {}
+
         $yahooTicker = mapTickerToYahoo($ticker);
         
-        // A. CHARTS FETCH
+        // Time Range Logic
         $end = time();
-        $start = 0;
+        $start = strtotime('-2 years'); // Default for EMA
         
-        // Zjistíme, odkdy stahovat
-        if ($period !== 'max') {
-            $stmtMax = $pdo->prepare("SELECT MAX(date) FROM tickers_history WHERE ticker = ?");
-            $stmtMax->execute([$ticker]);
-            $lastDate = $stmtMax->fetchColumn();
-
-            // Zkontrolujeme počet záznamů pro EMA 212
-            // Pokud je záznamů málo (např. importovali jsme nově), musíme stáhnout delší historii,
-            // jinak by se stále stahoval jen přírůstek a EMA by se nikdy nespočítala.
-            $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM tickers_history WHERE ticker = ?");
-            $stmtCount->execute([$ticker]);
-            $histCount = $stmtCount->fetchColumn();
-            
-            if ($lastDate && $histCount >= 220) {
-                // Máme dost historie, stačí incremental update
-                // Stahujeme vždy alespoň posledních 7 dní pro update
-                // (Overlap fetch) - eliminuje "missing data" a "corrections"
-                $start = strtotime($lastDate) - (7 * 86400); 
-            } else {
-                // Nemáme dost dat (nebo žádná), stahneme 2 roky pro výpočet EMA
-                $start = strtotime('-2 years');
-            }
-        } else {
-            $start = strtotime('-20 years'); // Max fetch
+        if ($period === 'max') {
+            $start = strtotime('-20 years');
             if (strpos($yahooTicker, 'BTC') !== false) $start = strtotime('2014-09-15');
+        } elseif ($period === '1y') {
+            $start = strtotime('-1 year');
+        } elseif ($period === 'current') {
+             // Only fetch today/yesterday
+             $start = strtotime('-5 days');
+        } else {
+            // Smart auto (default empty period)
+            // Check last fetch
+            try {
+                $lastDate = $pdo->query("SELECT MAX(date) FROM tickers_history WHERE ticker = '$ticker'")->fetchColumn();
+                if ($lastDate) {
+                    $start = strtotime($lastDate) - (7 * 86400); // 1 week overlap
+                } else {
+                    $start = strtotime('-2 years');
+                }
+            } catch(Exception $e) {}
         }
 
-        // Fetch URL Logic with Retry
-        $fetchUrl = function($symbol) use ($start, $end) {
-            $url = "https://query2.finance.yahoo.com/v8/finance/chart/{$symbol}?period1={$start}&period2={$end}&interval=1d&events=history&includeAdjustedClose=true";
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-            $json = curl_exec($ch);
-            $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            return ['json' => $json, 'http' => $http];
-        };
-
-        $res = $fetchUrl($yahooTicker);
-        $json = $res['json'];
-        $http = $res['http'];
-
-        // Retry mechanism for Dot vs Hyphen (e.g. BRK.B -> BRK-B) if 404
-        if ($http === 404 && strpos($yahooTicker, '.') !== false) {
-             // Only try if it's not a known exchange suffix (heuristic)
-             // Exchanges: .PR, .DE, .L, .MI, .PA, etc. Usually 2 letters.
-             // Classes: .A, .B.
+        // --- ATTEMPT 1: YAHOO FINANCE ---
+        $yahooSuccess = false;
+        $usedSource = 'yahoo';
+        
+        // Fetch JSON
+        $url = "https://query2.finance.yahoo.com/v8/finance/chart/" . urlencode($yahooTicker) . 
+               "?period1=$start&period2=$end&interval=1d&events=history&includeAdjustedClose=true";
+        
+        $ctx = stream_context_create(['http' => ['method'=>'GET', 'timeout'=>8]]);
+        $json = @file_get_contents($url, false, $ctx);
+        
+        $yahooData = null;
+        if ($json) {
+            $decoded = json_decode($json, true);
+            $res = $decoded['chart']['result'][0] ?? null;
+            // Validate: Must have timestamp array
+            if ($res && !empty($res['timestamp'])) {
+                $yahooSuccess = true;
+                $yahooData = $res;
+            }
+        }
+        
+        // Retry logic for Dot/Hyphen (e.g. BRK.B)
+        if (!$yahooSuccess && strpos($yahooTicker, '.') !== false) {
+             // Heuristic: If it's a class share (single letter suffix)
              $suffix = substr(strrchr($yahooTicker, '.'), 1);
-             if (strlen($suffix) === 1) { // It's likely a class share
-                 $altTicker = str_replace('.', '-', $yahooTicker);
-                 $res = $fetchUrl($altTicker);
-                 if ($res['http'] === 200) {
-                     $json = $res['json'];
-                     $http = $res['http'];
-                     $yahooTicker = $altTicker; // Update for subsequent usage
+             if (strlen($suffix) === 1) { 
+                 $alt = str_replace('.', '-', $yahooTicker);
+                 $urlAlt = "https://query2.finance.yahoo.com/v8/finance/chart/" . urlencode($alt) . 
+                           "?period1=$start&period2=$end&interval=1d&events=history&includeAdjustedClose=true";
+                 $jsonAlt = @file_get_contents($urlAlt, false, $ctx);
+                 if ($jsonAlt) {
+                     $dAlt = json_decode($jsonAlt, true);
+                     if (!empty($dAlt['chart']['result'][0]['timestamp'])) {
+                         $yahooSuccess = true;
+                         $yahooData = $dAlt['chart']['result'][0];
+                         $yahooTicker = $alt;
+                     }
                  }
              }
         }
-        
-        $conversionFactor = 1.0;
-        $chartSuccess = false;
 
-        // DB Transaction for History
-        if ($http === 200 && $json) {
-            $data = json_decode($json, true);
-            if (!empty($data['chart']['result'][0]['timestamp'])) {
-                $chartSuccess = true;
-                $res = $data['chart']['result'][0];
-                $ts = $res['timestamp'];
-                $c = $res['indicators']['quote'][0]['close'];
-                
-                // Curr Conv Logic
-                $yCur = strtoupper($res['meta']['currency'] ?? 'USD');
-                $stmtC = $pdo->prepare("SELECT currency FROM live_quotes WHERE id=?");
-                $stmtC->execute([$ticker]);
-                $tCur = strtoupper($stmtC->fetchColumn() ?: '');
-                
-                // GBp fix
-                if ($yCur === 'GBP' && $tCur === 'GBP') {
-                     $lp = end($c);
-                     $stmtP = $pdo->prepare("SELECT current_price FROM live_quotes WHERE id=?");
-                     $stmtP->execute([$ticker]);
-                     $curP = (float)$stmtP->fetchColumn();
-                     if ($curP > 0 && abs($lp/$curP - 100) < 50) $conversionFactor = 0.01; // Ratio ~100
+        // --- ATTEMPT 2: GOOGLE FALLBACK ---
+        if (!$yahooSuccess) {
+            $usedSource = 'google_fallback';
+            // GoogleService fetches current price and saves to DB.
+            // It does NOT return history array, so EMA/Stats calculation will rely on old history + new single point.
+            
+            // Note: GoogleService writes to 'live_quotes' and 'tickers_history' (single day).
+            $gRes = $googleService->getQuote($originalTicker, true); 
+            
+            if (!$gRes) {
+                // Total Failure
+                return ['status' => 'error', 'message' => 'Failed Yahoo & Google for ' . $originalTicker];
+            }
+            
+            // If Google OK, we consider it a success for "live price" perspective.
+            // We can try to calc stats if we have history in DB.
+        } else {
+            // --- YAHOO PROCESSING ---
+            // 1. Save History
+            $ts = $yahooData['timestamp'];
+            $c = $yahooData['indicators']['quote'][0]['close'];
+            
+            // GBp fix?
+            $factor = 1.0;
+            // Investyx assumes major currency (GBP).
+            // Heuristic: If price > 200 and previously stored price < 10, it's pence.
+            $stmtP = $pdo->prepare("SELECT current_price FROM live_quotes WHERE id=?");
+            $stmtP->execute([$originalTicker]);
+            $lastP = (float)$stmtP->fetchColumn();
+            
+            $lastYahooVal = end($c);
+            // Example: Yahoo sends 1200 (GBp). Last DB price was 12.0 (GBP). Ratio ~ 100.
+            if ($lastP > 0 && $lastYahooVal > 0) {
+                 $ratio = $lastYahooVal / $lastP;
+                 if ($ratio > 50 && $ratio < 150) $factor = 0.01; 
+            }
+
+            $sqlH = "INSERT INTO tickers_history (ticker, date, price, source) VALUES (?, ?, ?, 'yahoo') ON DUPLICATE KEY UPDATE price=VALUES(price), source=VALUES(source)";
+            $stmtH = $pdo->prepare($sqlH);
+            
+            $pdo->beginTransaction();
+            foreach ($ts as $i => $t) {
+                if (isset($c[$i]) && $c[$i] !== null) {
+                    $d = date('Y-m-d', $t);
+                    $val = $c[$i] * $factor;
+                    $stmtH->execute([$ticker, $d, $val]);
+                    if ($ticker !== $originalTicker) $stmtH->execute([$originalTicker, $d, $val]);
                 }
+            }
+            $pdo->commit();
+            
+            // 2. Fetch Fundamentals (v7 quote) to update live_quotes table
+            $qUrl = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" . urlencode($yahooTicker);
+            $qJson = @file_get_contents($qUrl, false, $ctx);
+            if ($qJson) {
+                $qData = json_decode($qJson, true);
+                $qRes = $qData['quoteResponse']['result'][0] ?? [];
                 
-                // Insert History
-                $sqlHist = "INSERT INTO tickers_history (ticker, date, price, source) VALUES (:t, :d, :p, 'yahoo') ON DUPLICATE KEY UPDATE price=VALUES(price), source=VALUES(source)";
-                $stmtHist = $pdo->prepare($sqlHist);
-                
-                if(!$pdo->inTransaction()) $pdo->beginTransaction();
-                for($i=0; $i<count($ts); $i++) {
-                    if (isset($c[$i]) && $c[$i] !== null) {
-                        $dateStr = date('Y-m-d', $ts[$i]);
-                        $price = $c[$i] * $conversionFactor;
-                        // Save under canonical ticker
-                        $stmtHist->execute([':t'=>$ticker, ':d'=>$dateStr, ':p'=>$price]);
-                        // Also save under original ticker if it's an alias
-                        if ($originalTicker !== $ticker) {
-                            $stmtHist->execute([':t'=>$originalTicker, ':d'=>$dateStr, ':p'=>$price]);
-                        }
-                    }
+                if ($qRes) {
+                    $lp = $qRes['regularMarketPrice'] ?? end($c);
+                    $chg = $qRes['regularMarketChange'] ?? 0;
+                    $chgPct = $qRes['regularMarketChangePercent'] ?? 0;
+                    
+                    // Update live_quotes
+                    $sqlLQ = "UPDATE live_quotes SET 
+                              current_price = :p, 
+                              change_amount = :ca,
+                              change_percent = :cp,
+                              last_fetched = NOW(),
+                              server_source = 'yahoo'
+                              WHERE id = :id";
+                    
+                    $pdo->prepare($sqlLQ)->execute([
+                        ':p' => $lp * $factor, 
+                        ':ca' => $chg * $factor,
+                        ':cp' => $chgPct,
+                        ':id' => $originalTicker
+                    ]);
+                    
+                    // Update Extra Fields
+                     $updExtras = [];
+                     $extraParams = [':id' => $originalTicker];
+                     
+                     if (isset($qRes['marketCap'])) {
+                         $updExtras[] = "market_cap = :mc";
+                         $extraParams[':mc'] = $qRes['marketCap'] * $factor;
+                     }
+                     if (isset($qRes['trailingPE'])) {
+                         $updExtras[] = "pe_ratio = :pe";
+                         $extraParams[':pe'] = $qRes['trailingPE'];
+                     }
+                     if (isset($qRes['dividendYield'])) {
+                         $updExtras[] = "dividend_yield = :dy";
+                         $extraParams[':dy'] = $qRes['dividendYield'];
+                     }
+                     
+                     if (!empty($updExtras)) {
+                         $sqlEx = "UPDATE live_quotes SET " . implode(', ', $updExtras) . " WHERE id = :id";
+                         $pdo->prepare($sqlEx)->execute($extraParams);
+                     }
                 }
-                if($pdo->inTransaction()) $pdo->commit();
             }
         }
 
-        // B. CALCULATE STATS (ATH, EMA)
-        // Fetch All History Sorted
+        // --- STATS CALC (EMA, ATH) ---
+        // Fetch full history now (sorted)
         $stmtAll = $pdo->prepare("SELECT price FROM tickers_history WHERE ticker=? ORDER BY date ASC");
-        $stmtAll->execute([$ticker]);
+        $stmtAll->execute([$originalTicker]); // Use original
         $allPrices = $stmtAll->fetchAll(PDO::FETCH_COLUMN);
         
-        $maxPrice = 0; $minPrice = 0; $emaValue = null;
-        if (!empty($allPrices)) {
-            $maxPrice = max($allPrices);
-            $minPrice = min($allPrices);
+        if ($allPrices) {
+            $ath = max($allPrices);
+            $atl = min($allPrices);
+            $ema = calcEMA($allPrices, 212);
             
-            // EMA Calculation
-            // UI says "Trend (EMA) - EMA 212", so we use 212.
-            $emaValue = calcEMA($allPrices, 212);
-        }
-
-        // C. QUOTE FETCH (Fundamentals)
-        $qUrl = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" . urlencode($yahooTicker);
-        $ch2 = curl_init();
-        curl_setopt($ch2, CURLOPT_URL, $qUrl);
-        curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch2, CURLOPT_USERAGENT, 'Mozilla/5.0');
-        $qJson = curl_exec($ch2);
-        curl_close($ch2);
-
-        $qC = [];
-        if ($qJson) {
-            $qd = json_decode($qJson, true);
-            $qC = $qd['quoteResponse']['result'][0] ?? [];
-        }
-
-        // D. FINAL UPDATE
-        // Map Quote fields
-        $fields = [
-            'dividendYield' => ['dividend_yield', true], // name, isPercent
-            'trailingPE' => ['pe_ratio', false],
-            'marketCap' => ['market_cap', false, true], // name, isPerc, isMoney
-            'regularMarketPreviousClose' => ['previous_close', false, true],
-            'regularMarketOpen' => ['open_price', false, true],
-            'regularMarketDayLow' => ['day_low', false, true],
-            'regularMarketDayHigh' => ['day_high', false, true],
-            'regularMarketVolume' => ['volume', false, false],
-            'fiftyTwoWeekHigh' => ['week_52_high', false, true],
-            'fiftyTwoWeekLow' => ['week_52_low', false, true],
-            'regularMarketChange' => ['change_amount', false, true],
-            'regularMarketChangePercent' => ['change_percent', false, false]
-        ];
-        
-        // Resilience / Phoenix Score Calculation
-        // Logic: Drop > 60% from ATH to ATL, and Current Price > 70% of ATH (Recovery)
-        // Or: Current Price > ATL + (ATH-ATL)*0.7 ? 
-        // Tooltip says: "Pád >60%, následný návrat k 70% maxima" => Back to 70% of ATH level.
-        $resilienceScore = 0;
-        if ($maxPrice > 0 && $minPrice > 0) {
-            // Check if it's a "Phoenix" candidate (Deep drop in history)
-            $drop = ($maxPrice - $minPrice) / $maxPrice; // e.g. (100 - 30)/100 = 0.70 drop
-            
-            if ($drop >= 0.60) {
-                // Check recovery
-                // Current price needed. Use data from yahoo quote or last history point.
-                $curP = $qC['regularMarketPrice'] ?? end($allPrices);
-                
-                if ($curP > 0) {
-                    $recoveryLevel = $curP / $maxPrice; // e.g. 75 / 100 = 0.75
-                    if ($recoveryLevel >= 0.70) {
-                        $resilienceScore = 1; // It is a Phoenix
-                    }
-                }
+            // Resilience
+            $resilience = 0;
+            $drop = ($ath - $atl) / ($ath ?: 1);
+            if ($drop > 0.6) {
+                $cur = end($allPrices);
+                if (($cur / ($ath ?: 1)) > 0.7) $resilience = 1;
             }
-        }
 
-        // Build SQL
-        $updParts = [];
-        $updParams = [
-            ':id' => $ticker, 
-            ':ath' => $maxPrice, 
-            ':atl' => $minPrice, 
-            ':ema' => $emaValue,
-            ':res' => $resilienceScore
-        ];
+            $sqlUpd = "UPDATE live_quotes SET all_time_high=?, all_time_low=?, ema_212=?, resilience_score=? WHERE id=?";
+            $pdo->prepare($sqlUpd)->execute([$ath, $atl, $ema, $resilience, $originalTicker]);
+        }
         
-        // Add static parts
-        $updParts[] = "all_time_high = GREATEST(COALESCE(all_time_high,0), :ath)";
-        $updParts[] = "all_time_low = LEAST(COALESCE(all_time_low,999999), :atl)";
-        $updParts[] = "ema_212 = :ema"; // Save EMA
-        $updParts[] = "resilience_score = :res"; 
-        $updParts[] = "last_fetched = NOW()";
-
-        foreach ($fields as $yKey => $def) {
-            $dbCol = $def[0];
-            $val = $qC[$yKey] ?? null;
-            
-            // Fallback for PE
-            if ($yKey === 'trailingPE' && $val === null) $val = $qC['forwardPE'] ?? null;
-            
-            if ($val !== null) {
-                if (($def[1] ?? false) && $val < 1.0) $val *= 100; // Percent fix
-                if (($def[2] ?? false) && $conversionFactor != 1.0) $val *= $conversionFactor; // Money conv
-                
-                $paramName = ":p_".$dbCol;
-                $updParts[] = "$dbCol = $paramName";
-                $updParams[$paramName] = $val;
-            }
-        }
-
-        $sqlFinal = "UPDATE live_quotes SET " . implode(', ', $updParts) . " WHERE id = :id";
-        $pdo->prepare($sqlFinal)->execute($updParams);
-
-        return 1;
+        return ['status' => 'ok', 'source' => $usedSource];
     }
-
-    // --- MAIN LOOP ---
+    
+    // 5. Input Handler
+    $inputRaw = file_get_contents('php://input');
+    $input = json_decode($inputRaw, true);
+    
+    $action = $_GET['action'] ?? $_POST['action'] ?? ($input['action'] ?? '');
+    
+    // List Mode
+    if ($action === 'list') {
+        $stmt = $pdo->query("SELECT id FROM live_quotes WHERE status='active' ORDER BY id");
+        echo json_encode(['success'=>true, 'tickers'=>$stmt->fetchAll(PDO::FETCH_COLUMN)]);
+        exit;
+    }
+    
+    // Batch/Single Mode
+    $ticker = $_GET['ticker'] ?? $_POST['ticker'] ?? ($input['ticker'] ?? '');
+    $period = $_GET['period'] ?? $_POST['period'] ?? ($input['period'] ?? 'smart');
+    
     if ($ticker === 'ALL') {
-        $ids = $pdo->query("SELECT id FROM live_quotes WHERE status='active'")->fetchAll(PDO::FETCH_COLUMN);
-        $ok = 0; $fail = 0;
-        foreach($ids as $t) {
-            try { processTicker($pdo, $t, $period); $ok++; } catch (Exception $e) { $fail++; }
-        }
-        echo json_encode(['success'=>true, 'stats'=>['ok'=>$ok, 'fail'=>$fail]]);
+         // Not supported here properly (timeout risk). Use Loop in frontend.
+         echo json_encode(['success'=>false, 'message'=>'Use batch loop in frontend']);
+         exit;
+    }
+    
+    if ($ticker) {
+        $res = processTicker($pdo, $googleService, $ticker, $period);
+        echo json_encode(array_merge(['success'=> true], $res));
     } else {
-        processTicker($pdo, $ticker, $period);
-        echo json_encode(['success'=>true]);
+        echo json_encode(['success'=>false, 'message'=>'No ticker']);
     }
 
 } catch (Exception $e) {
