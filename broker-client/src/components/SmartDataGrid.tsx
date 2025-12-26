@@ -330,90 +330,131 @@ export const SmartDataGrid = <T,>({ items, columns, getRowId,
         let result = [...items];
 
         if (Object.keys(filters).length > 0) {
+            // OPTIMIZATION: Pre-parse filters to avoid repeated expensive operations (like Date parsing) per row
+            const parsedFilters = Object.entries(filters).map(([colId, val]) => {
+                const trimmedVal = val.trim();
+
+                // Smart Operators (>, <)
+                let numOp: { type: '>' | '<', limit: number } | null = null;
+                if (trimmedVal.startsWith('>')) {
+                    const limit = parseFloat(trimmedVal.substring(1).trim());
+                    if (!isNaN(limit)) numOp = { type: '>', limit };
+                } else if (trimmedVal.startsWith('<')) {
+                    const limit = parseFloat(trimmedVal.substring(1).trim());
+                    if (!isNaN(limit)) numOp = { type: '<', limit };
+                }
+
+                // Smart Date Logic
+                const isRange = trimmedVal.includes('..');
+                const isPotentialSmartDate = /^\d{1,4}$/.test(trimmedVal) || /^\d{1,2}\.\d{1,2}(\.\d{2,4})?\.?$/.test(trimmedVal);
+                let dateOp: { type: 'range' | 'exact', start?: Date | null, end?: Date | null, target?: Date | null, isoTarget?: string } | null = null;
+
+                if (isRange || isPotentialSmartDate) {
+                    if (isRange) {
+                        const parts = trimmedVal.split('..');
+                        const start = parts[0] ? parseSmartDate(parts[0]) : null;
+                        const end = parts[1] ? parseSmartDate(parts[1]) : null;
+                        if (start) start.setHours(0, 0, 0, 0);
+                        if (end) end.setHours(23, 59, 59, 999);
+                        dateOp = { type: 'range', start, end };
+                    } else {
+                        const target = parseSmartDate(trimmedVal);
+                        if (target) {
+                            target.setHours(0, 0, 0, 0);
+                            const isoTarget = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+                            dateOp = { type: 'exact', target, isoTarget };
+                        }
+                    }
+                }
+
+                // Text Conditions
+                const conditions = trimmedVal.split(',').map(s => {
+                    let target = s.trim();
+                    let isNegation = false;
+                    if (target.startsWith('!')) {
+                        isNegation = true;
+                        target = target.substring(1);
+                    }
+
+                    let regex: RegExp | null = null;
+                    if (target.includes('*')) {
+                        try {
+                            const escaped = target.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+                            const pattern = escaped.replace(/\*/g, '.*');
+                            regex = new RegExp(`^${pattern}$`, 'i');
+                        } catch (e) { /* ignore invalid regex */ }
+                    }
+
+                    return { text: target, isNegation, regex };
+                });
+
+                return { colId, val: trimmedVal, numOp, dateOp, conditions };
+            });
+
             result = result.filter(item => {
-                for (const [colId, val] of Object.entries(filters)) {
-                    const itemValRaw = (item as any)[colId];
+                for (const filter of parsedFilters) {
+                    const itemValRaw = (item as any)[filter.colId];
                     const itemValStr = (itemValRaw === undefined || itemValRaw === null) ? '' : String(itemValRaw);
-                    const itemValNum = parseFloat(itemValStr);
 
-                    // --- Smart Operators (>, <) ---
-                    if (val.startsWith('>')) {
-                        const limit = parseFloat(val.substring(1).trim());
-                        if (!isNaN(limit) && !isNaN(itemValNum) && itemValNum > limit) continue;
-                        if (!isNaN(limit)) return false;
-                    }
-                    if (val.startsWith('<')) {
-                        const limit = parseFloat(val.substring(1).trim());
-                        if (!isNaN(limit) && !isNaN(itemValNum) && itemValNum < limit) continue;
-                        if (!isNaN(limit)) return false;
-                    }
-
-                    // --- Range/Smart Date Logic ---
-                    const isRange = val.includes('..');
-                    const isPotentialSmartDate = /^\d{1,4}$/.test(val) || /^\d{1,2}\.\d{1,2}(\.\d{2,4})?\.?$/.test(val);
-
-                    let itemDate: Date | null = null;
-                    if (itemValStr && /^\d{4}-\d{2}-\d{2}$/.test(itemValStr)) {
-                        const [y, m, d] = itemValStr.split('-').map(n => parseInt(n, 10));
-                        itemDate = new Date(y, m - 1, d);
-                    } else if (!isNaN(Date.parse(itemValStr)) && itemValStr.includes('-')) {
-                        itemDate = new Date(itemValStr);
-                    }
-
-                    if (itemDate && (isRange || isPotentialSmartDate)) {
-                        itemDate.setHours(0, 0, 0, 0);
-
-                        if (isRange) {
-                            const parts = val.split('..');
-                            const start = parts[0] ? parseSmartDate(parts[0]) : null;
-                            const end = parts[1] ? parseSmartDate(parts[1]) : null;
-
-                            if (start) start.setHours(0, 0, 0, 0);
-                            if (end) end.setHours(23, 59, 59, 999);
-
-                            if (start && itemDate < start) return false;
-                            if (end && itemDate > end) return false;
-                            continue;
+                    // 1. Numeric Operators
+                    if (filter.numOp) {
+                        const itemValNum = parseFloat(itemValStr);
+                        if (!isNaN(itemValNum)) {
+                            if (filter.numOp.type === '>' && itemValNum > filter.numOp.limit) continue;
+                            if (filter.numOp.type === '<' && itemValNum < filter.numOp.limit) continue;
                         } else {
-                            const targetDate = parseSmartDate(val);
-                            if (targetDate) {
-                                targetDate.setHours(0, 0, 0, 0);
-                                if (itemDate.getTime() !== targetDate.getTime()) return false;
+                            // If item is not number but filter is numeric op, it's a mismatch
+                            return false;
+                        }
+                    }
+
+                    // 2. Date Logic
+                    if (filter.dateOp) {
+                        // Fast path for exact match on ISO dates (YYYY-MM-DD)
+                        if (filter.dateOp.type === 'exact' && filter.dateOp.isoTarget && /^\d{4}-\d{2}-\d{2}$/.test(itemValStr)) {
+                            if (itemValStr === filter.dateOp.isoTarget) continue;
+                            // If ISO match fails, fall through to object match (just in case) or text search?
+                            // Let's rely on date validation. If it doesn't match date, return false.
+                            return false;
+                        }
+
+                        let itemDate: Date | null = null;
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(itemValStr)) {
+                            const [y, m, d] = itemValStr.split('-').map(n => parseInt(n, 10));
+                            itemDate = new Date(y, m - 1, d);
+                        } else if (!isNaN(Date.parse(itemValStr)) && itemValStr.includes('-')) {
+                            itemDate = new Date(itemValStr);
+                        }
+
+                        if (itemDate) {
+                            itemDate.setHours(0, 0, 0, 0);
+                            const t = itemDate.getTime();
+                            if (filter.dateOp.type === 'range') {
+                                if (filter.dateOp.start && t < filter.dateOp.start.getTime()) return false;
+                                if (filter.dateOp.end && t > filter.dateOp.end.getTime()) return false;
+                                continue;
+                            } else if (filter.dateOp.type === 'exact') {
+                                if (filter.dateOp.target && t !== filter.dateOp.target.getTime()) return false;
                                 continue;
                             }
                         }
                     }
 
-                    const conditions = val.split(',').map(s => s.trim());
-                    if (conditions.length === 0 || (conditions.length === 1 && conditions[0] === '')) continue;
+                    // 3. Text/Wildcard Logic
+                    if (filter.conditions.length === 0) continue;
 
-                    const match = conditions.some(cond => {
-                        let target = cond;
-                        let isNegation = false;
-
-                        if (target.startsWith('!')) {
-                            isNegation = true;
-                            target = target.substring(1);
-                        }
-
+                    const match = filter.conditions.some(cond => {
                         let isMatch = false;
-                        if (target === '""' || target === "''") {
+                        if (cond.text === '""' || cond.text === "''") {
                             isMatch = (itemValStr === '');
+                        } else if (cond.text === '') {
+                            isMatch = true;
+                        } else if (cond.regex) {
+                            isMatch = cond.regex.test(itemValStr);
                         } else {
-                            if (target === '') {
-                                isMatch = true;
-                            } else if (target.includes('*')) {
-                                const escaped = target.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-                                const pattern = escaped.replace(/\*/g, '.*');
-                                const regex = new RegExp(`^${pattern}$`, 'i');
-                                isMatch = regex.test(itemValStr);
-                            } else {
-                                // Default -> Exact match (case insensitive)
-                                isMatch = itemValStr.toLowerCase() === target.toLowerCase();
-                            }
+                            isMatch = itemValStr.toLowerCase() === cond.text.toLowerCase();
                         }
-
-                        return isNegation ? !isMatch : isMatch;
+                        return cond.isNegation ? !isMatch : isMatch;
                     });
 
                     if (!match) return false;
