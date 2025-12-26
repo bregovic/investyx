@@ -157,7 +157,14 @@ const ChartModal = ({ open, ticker, currency, companyName, onClose }: { open: bo
                                 </LineChart>
                             </ResponsiveContainer>
                         )}
-                        {data.length === 0 && !loading && <Text>Žádná data pro zvolené období.</Text>}
+                        {data.length === 0 && !loading && (
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px' }}>
+                                <Text size={400} weight="semibold">Žádná data pro zvolené období.</Text>
+                                <Text size={200} style={{ color: '#aaa', marginTop: '10px' }}>
+                                    Ticker: {ticker}, Záznamů: {allData.length} (Filtrováno: {data.length})
+                                </Text>
+                            </div>
+                        )}
                     </DialogContent>
                     <DialogActions><Button onClick={onClose}>Zavřít</Button></DialogActions>
                 </DialogBody>
