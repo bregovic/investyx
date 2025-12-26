@@ -752,7 +752,7 @@ class GoogleFinanceService
                                 'current_price'  => $price,
                                 'change_percent' => $changePct,
                                 'company_name'   => $companyName,
-                                'exchange'       => $result['meta']['exchangeName'] ?? 'Yahoo',
+                                'exchange'       => $result['meta']['fullExchangeName'] ?? $result['meta']['exchangeName'] ?? 'Yahoo',
                                 'currency'       => $result['meta']['currency'] ?? 'USD',
                             ];
                         }
