@@ -184,6 +184,7 @@ const MarketPage = () => {
     const [historyProgress, setHistoryProgress] = useState({ current: 0, total: 0, lastTicker: '' });
     const [historyLog, setHistoryLog] = useState<string[]>([]);
     const [isUpdatingHistory, setIsUpdatingHistory] = useState(false);
+    const [finalGridItems, setFinalGridItems] = useState<MarketItem[] | null>(null);
 
 
     const isDev = import.meta.env.DEV;
@@ -214,7 +215,7 @@ const MarketPage = () => {
 
     // NEW UNIFIED UPDATE HANDLER
     const handleUnifiedUpdate = async (mode: 'smart' | '1y' | 'max') => {
-        const targets = filteredItems.map(i => i.ticker);
+        const targets = (finalGridItems || filteredItems).map(i => i.ticker);
         if (targets.length === 0) return alert('Žádné tickery v aktuálním zobrazení.');
 
         const modeLabels: Record<string, string> = { 'smart': 'Rychlá (Smart)', '1y': 'Historie (1 Rok)', 'max': 'MAX (Kompletní)' };
@@ -327,7 +328,7 @@ const MarketPage = () => {
                 {loading ? <Spinner label={t('loading_data')} /> : (
                     <div className={styles.gridCard} style={{ flex: 1, minHeight: 0 }}>
                         <div style={{ minWidth: '800px', height: '100%' }}>
-                            <SmartDataGrid items={filteredItems} columns={columns} getRowId={(item) => item.ticker} withFilterRow={false} />
+                            <SmartDataGrid items={filteredItems} columns={columns} getRowId={(item) => item.ticker} withFilterRow={true} onFilteredDataChange={setFinalGridItems} />
                         </div>
                     </div>
                 )}

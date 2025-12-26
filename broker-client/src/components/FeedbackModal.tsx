@@ -237,8 +237,8 @@ export const FeedbackModal = ({ open, onOpenChange }: Omit<FeedbackModalProps, '
 
     return (
         <Dialog open={open} onOpenChange={(_e, data) => onOpenChange(data.open)}>
-            <DialogSurface style={{ maxWidth: '800px', width: '95%', height: 'auto', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-                <DialogBody style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <DialogSurface style={{ maxWidth: '800px', width: '95%', height: 'auto', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <DialogBody style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
                     <DialogTitle>
                         <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as any)}>
                             <Tab value="report">Nahlásit chybu / Zpětná vazba</Tab>
