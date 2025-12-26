@@ -88,6 +88,8 @@ try {
             if (strpos($yahooTicker, 'BTC') !== false) $start = strtotime('2014-09-15');
         } elseif ($period === '1y') {
             $start = strtotime('-1 year');
+        } elseif ($period === '5y') {
+            $start = strtotime('-5 years');
         } elseif ($period === 'current') {
              // Only fetch today/yesterday
              $start = strtotime('-5 days');

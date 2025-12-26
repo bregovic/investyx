@@ -23,11 +23,9 @@ import {
     Button,
     Text,
     Switch,
-    Menu,
-    MenuTrigger,
-    MenuList,
-    MenuItem,
-    MenuPopover
+    Dropdown,
+    Option,
+    Label
 } from '@fluentui/react-components';
 import {
     Add24Regular,
@@ -185,6 +183,8 @@ const MarketPage = () => {
     const [historyLog, setHistoryLog] = useState<string[]>([]);
     const [isUpdatingHistory, setIsUpdatingHistory] = useState(false);
     const [finalGridItems, setFinalGridItems] = useState<MarketItem[] | null>(null);
+    const [updateOptionsOpen, setUpdateOptionsOpen] = useState(false);
+    const [selectedPeriod, setSelectedPeriod] = useState<string>('smart');
 
 
     const isDev = import.meta.env.DEV;
@@ -214,12 +214,12 @@ const MarketPage = () => {
     });
 
     // NEW UNIFIED UPDATE HANDLER
-    const handleUnifiedUpdate = async (mode: 'smart' | '1y' | 'max') => {
+    const handleUnifiedUpdate = async () => {
+        const mode = selectedPeriod as 'smart' | '1y' | '5y' | 'max';
         const targets = (finalGridItems || filteredItems).map(i => i.ticker);
         if (targets.length === 0) return alert('Žádné tickery v aktuálním zobrazení.');
 
-        const modeLabels: Record<string, string> = { 'smart': 'Rychlá (Smart)', '1y': 'Historie (1 Rok)', 'max': 'MAX (Kompletní)' };
-        if (!confirm(`Spustit aktualizaci cen pro ${targets.length} zobrazených tickerů?\nRežim: ${modeLabels[mode]}`)) return;
+        setUpdateOptionsOpen(false);
 
         setHistoryUpdateOpen(true);
         setIsUpdatingHistory(true);
@@ -292,6 +292,37 @@ const MarketPage = () => {
                 </DialogSurface>
             </Dialog>
 
+            <Dialog open={updateOptionsOpen} onOpenChange={(_, d) => setUpdateOptionsOpen(d.open)}>
+                <DialogSurface>
+                    <DialogBody>
+                        <DialogTitle>Možnosti aktualizace</DialogTitle>
+                        <DialogContent>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', paddingBottom: '20px' }}>
+                                <Text>Aktualizovat ceny pro {(finalGridItems || filteredItems).length} zobrazených tickerů?</Text>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                    <Label>Rozsah historie:</Label>
+                                    <Dropdown
+                                        aria-label="Rozsah historie"
+                                        value={selectedPeriod === 'smart' ? 'Dnes (Smart)' : selectedPeriod === '1y' ? '1 Rok' : selectedPeriod === '5y' ? '5 Let' : 'Vše (MAX 1980+)'}
+                                        selectedOptions={[selectedPeriod]}
+                                        onOptionSelect={(_, data) => setSelectedPeriod(data.optionValue as string)}
+                                    >
+                                        <Option text="Dnes (Smart)" value="smart">Dnes (Smart)</Option>
+                                        <Option text="1 Rok" value="1y">1 Rok</Option>
+                                        <Option text="5 Let" value="5y">5 Let</Option>
+                                        <Option text="Vše (MAX 1980+)" value="max">Vše (MAX 1980+)</Option>
+                                    </Dropdown>
+                                </div>
+                            </div>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button appearance="primary" onClick={handleUnifiedUpdate}>Spustit (OK)</Button>
+                            <Button appearance="secondary" onClick={() => setUpdateOptionsOpen(false)}>Zavřít</Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
+
             <PageHeader>
                 <Toolbar>
                     <Dialog open={isAddOpen} onOpenChange={(_, data) => setAddOpen(data.open)}>
@@ -308,20 +339,9 @@ const MarketPage = () => {
                         <Switch label={showWatchedOnly ? t('filter_watched_on') : t('filter_watched_off')} checked={showWatchedOnly} onChange={(_ev, data) => setShowWatchedOnly(Boolean(data.checked))} />
                     </div>
                     <ToolbarDivider />
+                    <ToolbarDivider />
                     <ToolbarButton aria-label="Refresh" icon={<ArrowClockwise24Regular />} onClick={() => window.location.reload()}>{t('btn_refresh')}</ToolbarButton>
-                    <Menu>
-                        <MenuTrigger disableButtonEnhancement>
-                            <ToolbarButton aria-label="Update Prices" icon={<Flash24Regular />}>{t('btn_update_prices') || 'Aktualizovat ceny'}</ToolbarButton>
-                        </MenuTrigger>
-                        <MenuPopover>
-                            <MenuList>
-                                <MenuItem onClick={() => handleUnifiedUpdate('smart')}>Rychlá aktualizace (Smart)</MenuItem>
-                                <MenuItem onClick={() => handleUnifiedUpdate('1y')}>Stáhnout historii (1 Rok)</MenuItem>
-                                <ToolbarDivider />
-                                <MenuItem onClick={() => handleUnifiedUpdate('max')}>Přegenerovat vše (MAX 20y)</MenuItem>
-                            </MenuList>
-                        </MenuPopover>
-                    </Menu>
+                    <ToolbarButton aria-label="Update Prices" icon={<Flash24Regular />} onClick={() => setUpdateOptionsOpen(true)}>{t('btn_update_prices') || 'Aktualizovat ceny'}</ToolbarButton>
                 </Toolbar>
             </PageHeader>
             <PageContent noScroll>
