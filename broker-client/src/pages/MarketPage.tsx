@@ -271,7 +271,18 @@ const MarketPage = () => {
         createTableColumn<MarketItem>({ columnId: 'price', compare: (a, b) => a.current_price - b.current_price, renderHeaderCell: () => t('col_price'), renderCell: (item) => <div><strong>{Number(item.current_price).toLocaleString()}</strong> <small style={{ color: tokens.colorNeutralForeground3 }}>{item.currency}</small></div> }),
 
         createTableColumn<MarketItem>({ columnId: 'change_pct', compare: (a, b) => a.change_percent - b.change_percent, renderHeaderCell: () => t('col_change_pct'), renderCell: (item) => { const val = Number(item.change_percent); return <span className={val >= 0 ? styles.pos : styles.neg} style={{ fontWeight: 600 }}>{val > 0 ? '+' : ''}{val.toFixed(2)}%</span>; } }),
-        createTableColumn<MarketItem>({ columnId: 'range', compare: (a, b) => { const rA = a.high_52w ? (a.current_price / a.high_52w) : 0; const rB = b.high_52w ? (b.current_price / b.high_52w) : 0; return rA - rB; }, renderHeaderCell: () => t('col_range'), renderCell: (item) => { if (!item.high_52w || !item.low_52w || item.high_52w === 0) return <span className={styles.smallText}>-</span>; const max = Number(item.high_52w); const min = Number(item.low_52w); const cur = Number(item.current_price); const fromMax = ((cur - max) / max) * 100; const fromMin = min > 0 ? ((cur - min) / min) * 100 : 0; return (<div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px' }}><span className={styles.neg}>{fromMax.toFixed(1)}% ({t('from_max')})</span><span className={styles.pos}>+{fromMin.toFixed(1)}% ({t('from_min')})</span></div>); } }),
+        createTableColumn<MarketItem>({
+            columnId: 'ath',
+            compare: (a, b) => { const rA = a.high_52w ? (a.current_price / a.high_52w) : 0; const rB = b.high_52w ? (b.current_price / b.high_52w) : 0; return rA - rB; },
+            renderHeaderCell: () => 'ATH',
+            renderCell: (item) => { if (!item.high_52w || item.high_52w === 0) return <span className={styles.smallText}>-</span>; const max = Number(item.high_52w); const cur = Number(item.current_price); const diff = ((cur - max) / max) * 100; return <span className={styles.neg}>{diff.toFixed(1)}%</span>; }
+        }),
+        createTableColumn<MarketItem>({
+            columnId: 'atl',
+            compare: (a, b) => { const rA = a.low_52w ? (a.current_price / a.low_52w) : 0; const rB = b.low_52w ? (b.current_price / b.low_52w) : 0; return rA - rB; },
+            renderHeaderCell: () => 'ATL',
+            renderCell: (item) => { if (!item.low_52w || item.low_52w === 0) return <span className={styles.smallText}>-</span>; const min = Number(item.low_52w); const cur = Number(item.current_price); const diff = min > 0 ? ((cur - min) / min) * 100 : 0; return <span className={styles.pos}>+{diff.toFixed(1)}%</span>; }
+        }),
         createTableColumn<MarketItem>({ columnId: 'trend', compare: (a, b) => { const dA = a.ema_212 ? ((a.current_price - a.ema_212) / a.ema_212) : -999; const dB = b.ema_212 ? ((b.current_price - b.ema_212) / b.ema_212) : -999; return dA - dB; }, renderHeaderCell: () => t('col_trend'), renderCell: (item) => { if (!item.ema_212) return <span className={styles.smallText}>-</span>; const ema = Number(item.ema_212); const cur = Number(item.current_price); const diff = ((cur - ema) / ema) * 100; return (<div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px' }}><span style={{ fontWeight: 600, color: diff > 0 ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1 }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}%</span><span style={{ color: tokens.colorNeutralForeground3 }}>{t('trend_ema')}: {ema.toFixed(0)}</span></div>); } }),
         createTableColumn<MarketItem>({
             columnId: 'resilience',
