@@ -211,19 +211,24 @@ try {
                     $chg = $qRes['regularMarketChange'] ?? 0;
                     $chgPct = $qRes['regularMarketChangePercent'] ?? 0;
                     
+                    // Extract Exchange from Chart Meta
+                    $exchangeName = $yahooData['meta']['fullExchangeName'] ?? $yahooData['meta']['exchangeName'] ?? '';
+
                     // Update live_quotes
                     $sqlLQ = "UPDATE live_quotes SET 
                               current_price = :p, 
                               change_amount = :ca,
                               change_percent = :cp,
                               last_fetched = NOW(),
-                              server_source = 'yahoo'
+                              server_source = 'yahoo',
+                              exchange = :ex
                               WHERE id = :id";
                     
                     $pdo->prepare($sqlLQ)->execute([
                         ':p' => $lp * $factor, 
                         ':ca' => $chg * $factor,
                         ':cp' => $chgPct,
+                        ':ex' => $exchangeName,
                         ':id' => $originalTicker
                     ]);
                     
