@@ -279,9 +279,16 @@ const MarketPage = () => {
         }),
         createTableColumn<MarketItem>({
             columnId: 'atl',
-            compare: (a, b) => { const rA = a.low_52w ? (a.current_price / a.low_52w) : 0; const rB = b.low_52w ? (b.current_price / b.low_52w) : 0; return rA - rB; },
+            compare: (a, b) => { const rA = a.low_52w && a.high_52w ? ((a.current_price - a.low_52w) / a.high_52w) : 0; const rB = b.low_52w && b.high_52w ? ((b.current_price - b.low_52w) / b.high_52w) : 0; return rA - rB; },
             renderHeaderCell: () => 'ATL',
-            renderCell: (item) => { if (!item.low_52w || item.low_52w === 0) return <span className={styles.smallText}>-</span>; const min = Number(item.low_52w); const cur = Number(item.current_price); const diff = min > 0 ? ((cur - min) / min) * 100 : 0; return <span className={styles.pos}>+{diff.toFixed(1)}%</span>; }
+            renderCell: (item) => {
+                if (!item.low_52w || item.low_52w === 0 || !item.high_52w) return <span className={styles.smallText}>-</span>;
+                const min = Number(item.low_52w);
+                const max = Number(item.high_52w);
+                const cur = Number(item.current_price);
+                const diff = max > 0 ? ((cur - min) / max) * 100 : 0;
+                return <span className={styles.pos}>+{diff.toFixed(1)}%</span>;
+            }
         }),
         createTableColumn<MarketItem>({ columnId: 'trend', compare: (a, b) => { const dA = a.ema_212 ? ((a.current_price - a.ema_212) / a.ema_212) : -999; const dB = b.ema_212 ? ((b.current_price - b.ema_212) / b.ema_212) : -999; return dA - dB; }, renderHeaderCell: () => t('col_trend'), renderCell: (item) => { if (!item.ema_212) return <span className={styles.smallText}>-</span>; const ema = Number(item.ema_212); const cur = Number(item.current_price); const diff = ((cur - ema) / ema) * 100; return (<div style={{ display: 'flex', flexDirection: 'column', fontSize: '11px' }}><span style={{ fontWeight: 600, color: diff > 0 ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1 }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}%</span><span style={{ color: tokens.colorNeutralForeground3 }}>{t('trend_ema')}: {ema.toFixed(0)}</span></div>); } }),
         createTableColumn<MarketItem>({
