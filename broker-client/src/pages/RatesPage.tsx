@@ -201,8 +201,8 @@ export const RatesPage = () => {
                                 </div>
                             </DialogContent>
                             <DialogActions>
-                                <Button appearance="secondary" onClick={() => setIsAddOpen(false)}>{t('common.cancel')}</Button>
                                 <Button appearance="primary" onClick={handleAdd} disabled={submitting}>{t('common.save')}</Button>
+                                <Button appearance="secondary" onClick={() => setIsAddOpen(false)}>{t('common.cancel')}</Button>
                             </DialogActions>
                         </DialogBody>
                     </DialogSurface>
@@ -225,10 +225,10 @@ export const RatesPage = () => {
                                 <Text>{t('import_cnb_desc')}</Text>
                             </DialogContent>
                             <DialogActions>
-                                <Button appearance="secondary" onClick={() => setIsYearOpen(false)}>{t('common.cancel')}</Button>
                                 <Button appearance="primary" onClick={handleYearImport} disabled={yearImporting}>
                                     {yearImporting ? t('btn_importing') : t('btn_import')}
                                 </Button>
+                                <Button appearance="secondary" onClick={() => setIsYearOpen(false)}>{t('common.cancel')}</Button>
                             </DialogActions>
                         </DialogBody>
                     </DialogSurface>

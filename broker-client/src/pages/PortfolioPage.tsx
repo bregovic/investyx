@@ -287,11 +287,11 @@ export const PortfolioPage = () => {
                             </Text>
                         </DialogContent>
                         <DialogActions>
-                            <Button appearance="secondary" onClick={() => setDeleteDialogOpen(false)}>
-                                Zrušit
-                            </Button>
                             <Button appearance="primary" onClick={handleDelete} disabled={deleting}>
                                 {deleting ? 'Mažu...' : 'Smazat'}
+                            </Button>
+                            <Button appearance="secondary" onClick={() => setDeleteDialogOpen(false)}>
+                                Zrušit
                             </Button>
                         </DialogActions>
                     </DialogBody>

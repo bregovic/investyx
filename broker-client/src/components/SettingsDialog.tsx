@@ -84,11 +84,11 @@ export const SettingsDialog = ({ open, onOpenChange }: { open: boolean, onOpenCh
                         )}
                     </DialogContent>
                     <DialogActions>
-                        <Button appearance="secondary" onClick={() => onOpenChange(false)}>
-                            {t('common.cancel')}
-                        </Button>
                         <Button appearance="primary" onClick={handleSave} disabled={saving}>
                             {saving ? t('common.loading') : t('common.save')}
+                        </Button>
+                        <Button appearance="secondary" onClick={() => onOpenChange(false)}>
+                            {t('common.cancel')}
                         </Button>
                     </DialogActions>
                 </DialogBody>

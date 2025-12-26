@@ -368,7 +368,7 @@ const MarketPage = () => {
                             <DialogBody>
                                 <DialogTitle>{t('add_ticker_title')}</DialogTitle>
                                 <DialogContent><Input value={newTicker} onChange={(_, data) => setNewTicker(data.value)} placeholder="např. MSFT, AAPL" onKeyDown={(e) => { if (e.key === 'Enter') handleAddTicker(); }} /></DialogContent>
-                                <DialogActions><DialogTrigger disableButtonEnhancement><Button appearance="secondary">{t('btn_cancel')}</Button></DialogTrigger><Button appearance="primary" onClick={handleAddTicker} disabled={adding}>{adding ? t('btn_adding') : t('btn_add')}</Button></DialogActions>
+                                <DialogActions><Button appearance="primary" onClick={handleAddTicker} disabled={adding}>{adding ? t('btn_adding') : t('btn_add')}</Button><DialogTrigger disableButtonEnhancement><Button appearance="secondary">{t('btn_cancel')}</Button></DialogTrigger></DialogActions>
                             </DialogBody>
                         </DialogSurface>
                     </Dialog>

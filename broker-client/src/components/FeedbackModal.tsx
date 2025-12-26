@@ -392,14 +392,14 @@ export const FeedbackModal = ({ open, onOpenChange }: Omit<FeedbackModalProps, '
                     </DialogContent>
 
                     <DialogActions>
-                        <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="secondary">Zavřít</Button>
-                        </DialogTrigger>
                         {tab === 'report' && (
                             <Button appearance="primary" onClick={handleSubmit} disabled={sending}>
                                 {sending ? "Odesílám..." : "Odeslat"}
                             </Button>
                         )}
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="secondary">Zavřít</Button>
+                        </DialogTrigger>
                     </DialogActions>
                 </DialogBody>
             </DialogSurface>
