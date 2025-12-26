@@ -226,14 +226,18 @@ try {
                     // Extract Exchange from Chart Meta
                     $exchangeName = $yahooData['meta']['fullExchangeName'] ?? $yahooData['meta']['exchangeName'] ?? '';
 
+                    // Extract Company Name
+                    $cn = $qRes['longName'] ?? $qRes['shortName'] ?? '';
+
                     // Update live_quotes
                     $sqlLQ = "UPDATE live_quotes SET 
                               current_price = :p, 
                               change_amount = :ca,
                               change_percent = :cp,
                               last_fetched = NOW(),
-                              server_source = 'yahoo',
-                              exchange = :ex
+                              source = 'yahoo',
+                              exchange = :ex,
+                              company_name = COALESCE(NULLIF(:cn, ''), company_name)
                               WHERE id = :id";
                     
                     $pdo->prepare($sqlLQ)->execute([
@@ -241,6 +245,7 @@ try {
                         ':ca' => $chg * $factor,
                         ':cp' => $chgPct,
                         ':ex' => $exchangeName,
+                        ':cn' => $cn,
                         ':id' => $originalTicker
                     ]);
                     
